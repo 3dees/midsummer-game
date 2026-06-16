@@ -187,8 +187,8 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						contributing[i] = true
 						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
 				"conditionalBonus":
-					var present := (not syn.has("present_target")) or _grid_has(ids, syn["present_target"])
-					var absent := (not syn.has("absent_target")) or (not _grid_has(ids, syn["absent_target"]))
+					var present: bool = (not syn.has("present_target")) or _grid_has(ids, syn["present_target"])
+					var absent: bool = (not syn.has("absent_target")) or (not _grid_has(ids, syn["absent_target"]))
 					if present and absent:
 						per_cell[i] += syn["bonus"]
 						contributing[i] = true
@@ -199,20 +199,20 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						contributing[i] = true
 						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
 				"globalCountReward":
-					var key := id + ":globalCountReward"
+					var key: String = str(id) + ":globalCountReward"
 					if _grid_count(ids, syn["targets"]) >= syn["threshold"] and not fired.has(key):
 						fired[key] = true
 						rewards[syn["reward"]] += syn["amount"]
 						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"] })
 				"globalReward":
-					var key2 := id + ":globalReward"
+					var key2: String = str(id) + ":globalReward"
 					if _grid_has(ids, syn["requires"]) and not fired.has(key2):
 						fired[key2] = true
 						rewards[syn["reward"]] += syn["amount"]
 						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"] })
 				"periodicReward":
 					# dedup per symbol id per spin (matches the engine.ts fix)
-					var key3 := id + ":periodicReward"
+					var key3: String = str(id) + ":periodicReward"
 					if not fired.has(key3):
 						fired[key3] = true
 						var before: int = ctx["appearance_counts"].get(id, 0)
@@ -228,8 +228,8 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						contributing[i] = true
 						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
 				"roundBonus":
-					var is_odd := (ctx["round_number"] % 2) == 1
-					var match_round := is_odd if syn["round_type"] == "odd" else not is_odd
+					var is_odd: bool = (int(ctx["round_number"]) % 2) == 1
+					var match_round: bool = is_odd if syn["round_type"] == "odd" else not is_odd
 					if match_round:
 						var n := _grid_count(ids, syn["targets"])
 						if n > 0:
@@ -237,8 +237,8 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 							contributing[i] = true
 							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * n })
 				"roundPenalty":
-					var is_odd2 := (ctx["round_number"] % 2) == 1
-					var match_round2 := is_odd2 if syn["round_type"] == "odd" else not is_odd2
+					var is_odd2: bool = (int(ctx["round_number"]) % 2) == 1
+					var match_round2: bool = is_odd2 if syn["round_type"] == "odd" else not is_odd2
 					if match_round2:
 						mult_cell[i] *= syn["multiplier"]
 						contributing[i] = true
@@ -246,13 +246,13 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 				"spinCounter":
 					# age-based, capped (matches the Othala fix)
 					var age: int = tile_grid[i]["age"] if tile_grid[i] != null else 0
-					var steps := min(age, syn["cap"]) if syn.has("cap") else age
+					var steps: int = (min(age, int(syn["cap"])) if syn.has("cap") else age)
 					if steps > 0:
 						per_cell[i] += syn["bonus"] * steps
 						contributing[i] = true
 						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * steps })
 				"runningTotal":
-					var tracked := ctx["destroyed_this_run"] if syn["tracks"] == "destroyed_symbols" else 0
+					var tracked: int = (int(ctx["destroyed_this_run"]) if syn["tracks"] == "destroyed_symbols" else 0)
 					var capped: int = min(tracked, syn["cap"])
 					per_cell[i] += syn["bonus"] * capped
 					if capped > 0:
@@ -268,14 +268,14 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 		per_cell[i] = max(0, int(round(per_cell[i] * mult_cell[i])))
 
 	# 4. advance per-id appearance counts (one tick per id present this spin)
-	var appearance_next := ctx["appearance_counts"].duplicate()
+	var appearance_next: Dictionary = ctx["appearance_counts"].duplicate()
 	var seen := {}
 	for id in ids:
 		if id != null: seen[id] = true
 	for id in seen.keys():
 		appearance_next[id] = appearance_next.get(id, 0) + 1
 
-	var total := rewards["light_orbs"]
+	var total: int = rewards["light_orbs"]
 	for v in per_cell:
 		total += v
 
