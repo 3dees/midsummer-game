@@ -22,7 +22,7 @@ const GRID_SIZE := 20
 
 const BASE_TITHE_COSTS := [25, 50, 100, 150, 225, 300, 375, 450, 575, 650, 700, 777]
 const TITHE_SPINS := [5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10]
-const DIFFICULTY := 3.2
+const DIFFICULTY := 1.5  # playtest value — restore to 3.2 once reroll/removal spending are in
 const REMOVAL_ORB_CAP := 3
 
 static var _uid := 0

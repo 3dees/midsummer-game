@@ -80,6 +80,7 @@ const SYMBOLS := {
 		"name": "Snail", "rarity": "common", "base_value": 1, "tags": ["forest_floor"], "sprite": "snail.png",
 		"synergies": [
 			{ "type": "alternating", "multiplier": 2 },
+			{ "type": "periodicReward", "every": 4, "reward": "removal_orb", "amount": 1, "description": "Produces 1 Removal Orb every 4 spins" },
 		],
 	},
 	"sunbeam": {
@@ -163,6 +164,7 @@ const SYMBOLS := {
 		"synergies": [
 			{ "type": "adjacentBonus", "targets": ["berry"], "bonus": 2 },
 			{ "type": "passive", "effect": "destruction_immune" },
+			{ "type": "globalCountReward", "targets": ["forest_floor"], "threshold": 3, "reward": "removal_orb", "amount": 1, "description": "3+ Forest Floor symbols on grid: +1 Removal Orb" },
 		],
 	},
 	"wild_rose": {
