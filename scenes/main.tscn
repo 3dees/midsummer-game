@@ -1,10 +1,14 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scenes/game.gd" id="1_game"]
 [ext_resource type="Texture2D" path="res://assets/sprites/background.png" id="2_bg"]
 [ext_resource type="Theme" path="res://ui/theme.tres" id="3_theme"]
 [ext_resource type="Texture2D" path="res://assets/sprites/cabinet_clean.png" id="4_cabinet"]
 [ext_resource type="Texture2D" path="res://assets/sprites/orb.png" id="5_orb"]
+[ext_resource type="Texture2D" path="res://assets/sprites/bell.png" id="6_bell"]
+[ext_resource type="AudioStream" path="res://assets/audio/open_theme.mp3" id="7_music"]
+[ext_resource type="Texture2D" path="res://assets/sprites/reroll.png" id="8_reroll"]
+[ext_resource type="Texture2D" path="res://assets/sprites/removal.png" id="9_removal"]
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -27,6 +31,12 @@ texture = ExtResource("2_bg")
 expand_mode = 1
 stretch_mode = 6
 
+[node name="Music" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_music")
+volume_db = -10.0
+autoplay = true
+bus = &"Music"
+
 [node name="Layout" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -47,25 +57,72 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="ChipsRow" type="HBoxContainer" parent="Layout/HudPanel/HudBox"]
+[node name="HudTop" type="HBoxContainer" parent="Layout/HudPanel/HudBox"]
 layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ChipsRow" type="HBoxContainer" parent="Layout/HudPanel/HudBox/HudTop"]
+layout_mode = 2
+size_flags_horizontal = 3
 alignment = 1
 theme_override_constants/separation = 24
 
-[node name="OrbChip" type="Label" parent="Layout/HudPanel/HudBox/ChipsRow"]
+[node name="OrbChipBox" type="HBoxContainer" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow"]
 layout_mode = 2
-theme_type_variation = &"CurrencyLabel"
-text = "Light 0"
+theme_override_constants/separation = 4
 
-[node name="RerollChip" type="Label" parent="Layout/HudPanel/HudBox/ChipsRow"]
+[node name="Icon" type="TextureRect" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow/OrbChipBox"]
+custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
-theme_type_variation = &"CurrencyLabel"
-text = "Reroll 0"
+size_flags_vertical = 4
+texture = ExtResource("5_orb")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="RemovalChip" type="Label" parent="Layout/HudPanel/HudBox/ChipsRow"]
+[node name="OrbChip" type="Label" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow/OrbChipBox"]
 layout_mode = 2
 theme_type_variation = &"CurrencyLabel"
-text = "Removal 0"
+text = "0"
+
+[node name="RerollChipBox" type="HBoxContainer" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow/RerollChipBox"]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("8_reroll")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RerollChip" type="Label" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow/RerollChipBox"]
+layout_mode = 2
+theme_type_variation = &"CurrencyLabel"
+text = "0"
+
+[node name="RemovalChipBox" type="HBoxContainer" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow/RemovalChipBox"]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("9_removal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RemovalChip" type="Label" parent="Layout/HudPanel/HudBox/HudTop/ChipsRow/RemovalChipBox"]
+layout_mode = 2
+theme_type_variation = &"CurrencyLabel"
+text = "0"
+
+[node name="MuteButton" type="Button" parent="Layout/HudPanel/HudBox/HudTop"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"SecondaryButton"
+text = "Music: On"
 
 [node name="SubLine" type="Label" parent="Layout/HudPanel/HudBox"]
 layout_mode = 2
@@ -144,7 +201,7 @@ show_percentage = false
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-texture = ExtResource("5_orb")
+texture = ExtResource("6_bell")
 expand_mode = 1
 stretch_mode = 5
 
@@ -158,6 +215,18 @@ custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_type_variation = &"SecondaryButton"
 text = "Bag"
+
+[node name="SpinLog" type="PanelContainer" parent="Layout"]
+layout_mode = 2
+
+[node name="LogScroll" type="ScrollContainer" parent="Layout/SpinLog"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+
+[node name="LogLines" type="VBoxContainer" parent="Layout/SpinLog/LogScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
 
 [node name="DraftLayer" type="Control" parent="."]
 visible = false
@@ -287,15 +356,27 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"SecondaryButton"
 disabled = true
-text = "ESSENCES — Coming soon"
+text = "ELIXIRS — Coming soon"
 
 [node name="RemovalBar" type="PanelContainer" parent="BagLayer/Panel/BagBox"]
 layout_mode = 2
 
-[node name="RemovalLabel" type="Label" parent="BagLayer/Panel/BagBox/RemovalBar"]
+[node name="RemovalRow" type="HBoxContainer" parent="BagLayer/Panel/BagBox/RemovalBar"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Icon" type="TextureRect" parent="BagLayer/Panel/BagBox/RemovalBar/RemovalRow"]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("9_removal")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RemovalLabel" type="Label" parent="BagLayer/Panel/BagBox/RemovalBar/RemovalRow"]
 layout_mode = 2
 theme_type_variation = &"CurrencyLabel"
-text = "× 0 Removal Orbs"
+text = "0 Removal Orbs"
 
 [node name="HelperText" type="Label" parent="BagLayer/Panel/BagBox"]
 layout_mode = 2

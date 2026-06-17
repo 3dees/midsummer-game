@@ -132,7 +132,7 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 							if ids[n] == null: continue
 							per_cell[n] += syn["bonus"]
 							contributing[n] = true
-							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] })
+							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"], "cells": [i, n] })
 						contributing[i] = true
 					else:
 						var use_global := green_man_on and _targets_hit_tags(syn["targets"], green_man_tags)
@@ -150,15 +150,17 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						if matches > 0:
 							per_cell[i] += syn["bonus"] * matches
 							contributing[i] = true
-							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * matches, "green_man_boost": use_global })
+							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * matches, "green_man_boost": use_global, "cells": [i] })
 				"globalBonus":
 					if syn["targets"].has("all"):
+						var affected: Array = [i]
 						for j in GRID_SIZE:
 							if j == i or ids[j] == null: continue
 							per_cell[j] += syn["bonus"]
 							contributing[j] = true
+							affected.append(j)
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"], "cells": affected })
 					else:
 						var matches := 0
 						for j in GRID_SIZE:
@@ -168,48 +170,50 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						if matches > 0:
 							per_cell[i] += syn["bonus"] * matches
 							contributing[i] = true
-							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * matches })
+							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * matches, "cells": [i] })
 				"globalMultiplier":
 					var count := _grid_count(ids, syn["targets"])
 					if not (syn.has("requires") and count < syn["requires"]):
 						var touched := false
+						var mult_cells: Array = [i]
 						for j in GRID_SIZE:
 							if ids[j] == null: continue
 							if _matches_any(syn["targets"], ids[j]):
 								mult_cell[j] *= syn["multiplier"]
 								contributing[j] = true
 								touched = true
+								if j != i: mult_cells.append(j)
 						if touched:
-							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
+							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"], "cells": mult_cells })
 				"multipleBonus":
 					if _grid_count(ids, syn["targets"]) >= syn["requires"]:
 						mult_cell[i] *= syn["multiplier"]
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"], "cells": [i] })
 				"conditionalBonus":
 					var present: bool = (not syn.has("present_target")) or _grid_has(ids, syn["present_target"])
 					var absent: bool = (not syn.has("absent_target")) or (not _grid_has(ids, syn["absent_target"]))
 					if present and absent:
 						per_cell[i] += syn["bonus"]
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"], "cells": [i] })
 				"selfChance":
 					if randf() < syn["chance"]:
 						mult_cell[i] *= syn["multiplier"]
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"], "cells": [i] })
 				"globalCountReward":
 					var key: String = str(id) + ":globalCountReward"
 					if _grid_count(ids, syn["targets"]) >= syn["threshold"] and not fired.has(key):
 						fired[key] = true
 						rewards[syn["reward"]] += syn["amount"]
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"], "cells": [i] })
 				"globalReward":
 					var key2: String = str(id) + ":globalReward"
 					if _grid_has(ids, syn["requires"]) and not fired.has(key2):
 						fired[key2] = true
 						rewards[syn["reward"]] += syn["amount"]
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"], "cells": [i] })
 				"periodicReward":
 					# dedup per symbol id per spin (matches the engine.ts fix)
 					var key3: String = str(id) + ":periodicReward"
@@ -221,12 +225,12 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						if crossings > 0:
 							rewards[syn["reward"]] += syn["amount"] * crossings
 							contributing[i] = true
-							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"] * crossings })
+							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "reward_kind": syn["reward"], "reward_amount": syn["amount"] * crossings, "cells": [i] })
 				"alternating":
 					if ctx["alternating_tick"]:
 						mult_cell[i] *= syn["multiplier"]
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"], "cells": [i] })
 				"roundBonus":
 					var is_odd: bool = (int(ctx["round_number"]) % 2) == 1
 					var match_round: bool = is_odd if syn["round_type"] == "odd" else not is_odd
@@ -235,14 +239,14 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 						if n > 0:
 							per_cell[i] += syn["bonus"] * n
 							contributing[i] = true
-							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * n })
+							events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * n, "cells": [i] })
 				"roundPenalty":
 					var is_odd2: bool = (int(ctx["round_number"]) % 2) == 1
 					var match_round2: bool = is_odd2 if syn["round_type"] == "odd" else not is_odd2
 					if match_round2:
 						mult_cell[i] *= syn["multiplier"]
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"] })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "multiplier": syn["multiplier"], "cells": [i] })
 				"spinCounter":
 					# age-based, capped (matches the Othala fix)
 					var age: int = tile_grid[i]["age"] if tile_grid[i] != null else 0
@@ -250,14 +254,14 @@ static func score_grid(tile_grid: Array, ctx: Dictionary) -> Dictionary:
 					if steps > 0:
 						per_cell[i] += syn["bonus"] * steps
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * steps })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * steps, "cells": [i] })
 				"runningTotal":
 					var tracked: int = (int(ctx["destroyed_this_run"]) if syn["tracks"] == "destroyed_symbols" else 0)
 					var capped: int = min(tracked, syn["cap"])
 					per_cell[i] += syn["bonus"] * capped
 					if capped > 0:
 						contributing[i] = true
-						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * capped })
+						events.append({ "kind": "synergy", "cell": i, "id": id, "synergy_type": syn["type"], "orbs_delta": syn["bonus"] * capped, "cells": [i] })
 				_:
 					# v2 placeholders (transform, destroyAdjacent, sacrifice, etc.)
 					# are intentionally no-ops, exactly like engine.ts.
