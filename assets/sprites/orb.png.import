@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cp8u3d8n4whtu"
-path="res://.godot/imported/orb.png-6d3fc8ee22aba47892dcf9b7ee7e9391.ctex"
+path="res://.godot/imported/orb.png-403c4ccf8a5c48885b7ed2206088af93.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/orb.png"
-dest_files=["res://.godot/imported/orb.png-6d3fc8ee22aba47892dcf9b7ee7e9391.ctex"]
+source_file="res://assets/sprites/orb.png"
+dest_files=["res://.godot/imported/orb.png-403c4ccf8a5c48885b7ed2206088af93.ctex"]
 
 [params]
 

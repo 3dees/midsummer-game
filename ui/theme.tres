@@ -1,0 +1,205 @@
+[gd_resource type="Theme" load_steps=12 format=3]
+
+; Midsummer Slots — shared UI theme (Tier 1).
+; Primary Button = default Button (warm amber). Secondary = "SecondaryButton" type
+; variation (dark/outline). PanelContainer = dark navy. Label variations: TitleLabel
+; (gold 24), CaptionLabel (muted 13), CurrencyLabel (gold 20).
+
+[sub_resource type="StyleBoxFlat" id="primary_normal"]
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.886, 0.553, 0.184, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.27, 0.08, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="primary_hover"]
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.953, 0.624, 0.243, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5, 0.33, 0.1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="primary_pressed"]
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.78, 0.471, 0.137, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.42, 0.27, 0.08, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="primary_disabled"]
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.27, 0.28, 0.3, 0.5)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.36, 0.38, 0.4)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="sec_normal"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.07, 0.1, 0.15, 0.45)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.7, 0.78, 0.8, 0.45)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="sec_hover"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.12, 0.16, 0.22, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.78, 0.85, 0.87, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="sec_pressed"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.05, 0.07, 0.11, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.7, 0.78, 0.8, 0.45)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="sec_disabled"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.06, 0.08, 0.12, 0.3)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.43, 0.45, 0.25)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="panel_style"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(0.043, 0.063, 0.118, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.6, 0.6, 0.75)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="pbar_bg"]
+bg_color = Color(0.043, 0.063, 0.118, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.6, 0.6, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="pbar_fill"]
+bg_color = Color(0.886, 0.553, 0.184, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[resource]
+default_font_size = 16
+ProgressBar/styles/background = SubResource("pbar_bg")
+ProgressBar/styles/fill = SubResource("pbar_fill")
+Button/colors/font_color = Color(0.12, 0.09, 0.05, 1)
+Button/colors/font_color_hover = Color(0.1, 0.07, 0.03, 1)
+Button/colors/font_color_pressed = Color(0.1, 0.07, 0.03, 1)
+Button/colors/font_color_disabled = Color(0.65, 0.66, 0.68, 0.7)
+Button/font_sizes/font_size = 16
+Button/styles/normal = SubResource("primary_normal")
+Button/styles/hover = SubResource("primary_hover")
+Button/styles/pressed = SubResource("primary_pressed")
+Button/styles/disabled = SubResource("primary_disabled")
+SecondaryButton/base_type = &"Button"
+SecondaryButton/colors/font_color = Color(0.78, 0.83, 0.85, 1)
+SecondaryButton/colors/font_color_hover = Color(0.92, 0.95, 0.96, 1)
+SecondaryButton/colors/font_color_pressed = Color(0.78, 0.83, 0.85, 1)
+SecondaryButton/colors/font_color_disabled = Color(0.45, 0.48, 0.5, 1)
+SecondaryButton/font_sizes/font_size = 16
+SecondaryButton/styles/normal = SubResource("sec_normal")
+SecondaryButton/styles/hover = SubResource("sec_hover")
+SecondaryButton/styles/pressed = SubResource("sec_pressed")
+SecondaryButton/styles/disabled = SubResource("sec_disabled")
+PanelContainer/styles/panel = SubResource("panel_style")
+Label/colors/font_color = Color(0.9, 0.92, 0.9, 1)
+Label/font_sizes/font_size = 16
+TitleLabel/base_type = &"Label"
+TitleLabel/colors/font_color = Color(0.941, 0.784, 0.412, 1)
+TitleLabel/font_sizes/font_size = 24
+CaptionLabel/base_type = &"Label"
+CaptionLabel/colors/font_color = Color(0.6, 0.64, 0.66, 1)
+CaptionLabel/font_sizes/font_size = 13
+CurrencyLabel/base_type = &"Label"
+CurrencyLabel/colors/font_color = Color(0.941, 0.784, 0.412, 1)
+CurrencyLabel/font_sizes/font_size = 20

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c2nclw601qwiw"
-path="res://.godot/imported/wild_rose.png-c01b7d4effa530e16a05c439d19edeaa.ctex"
+path="res://.godot/imported/wild_rose.png-9d251dc71eee326ad34e823577f7c2fe.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/wild_rose.png"
-dest_files=["res://.godot/imported/wild_rose.png-c01b7d4effa530e16a05c439d19edeaa.ctex"]
+source_file="res://assets/sprites/wild_rose.png"
+dest_files=["res://.godot/imported/wild_rose.png-9d251dc71eee326ad34e823577f7c2fe.ctex"]
 
 [params]
 

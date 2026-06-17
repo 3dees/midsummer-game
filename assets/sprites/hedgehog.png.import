@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dhbkv5nmqhk8d"
-path="res://.godot/imported/hedgehog.png-4557d248ebec31a52890a199ecb7e3f0.ctex"
+path="res://.godot/imported/hedgehog.png-27c560a9f5b8eb7fad10a671de91cbd0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/hedgehog.png"
-dest_files=["res://.godot/imported/hedgehog.png-4557d248ebec31a52890a199ecb7e3f0.ctex"]
+source_file="res://assets/sprites/hedgehog.png"
+dest_files=["res://.godot/imported/hedgehog.png-27c560a9f5b8eb7fad10a671de91cbd0.ctex"]
 
 [params]
 

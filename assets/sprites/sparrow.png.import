@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://oir63mafddfl"
-path="res://.godot/imported/sparrow.png-0daa1aa2368a5405f7f87a5a086a8363.ctex"
+path="res://.godot/imported/sparrow.png-e166e0bd04039abe96047c667db1c361.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/sparrow.png"
-dest_files=["res://.godot/imported/sparrow.png-0daa1aa2368a5405f7f87a5a086a8363.ctex"]
+source_file="res://assets/sprites/sparrow.png"
+dest_files=["res://.godot/imported/sparrow.png-e166e0bd04039abe96047c667db1c361.ctex"]
 
 [params]
 

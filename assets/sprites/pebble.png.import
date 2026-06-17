@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://clk8wola3ff8d"
-path="res://.godot/imported/pebble.png-bcec66f9b0063e3347d33d6af4262373.ctex"
+path="res://.godot/imported/pebble.png-7a9d662b801acbca68a38418aa866507.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/pebble.png"
-dest_files=["res://.godot/imported/pebble.png-bcec66f9b0063e3347d33d6af4262373.ctex"]
+source_file="res://assets/sprites/pebble.png"
+dest_files=["res://.godot/imported/pebble.png-7a9d662b801acbca68a38418aa866507.ctex"]
 
 [params]
 

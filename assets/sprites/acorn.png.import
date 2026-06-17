@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ht3rxyi0652u"
-path="res://.godot/imported/acorn.png-4f5bcb24cdf1e2df8094ad14b605e7b9.ctex"
+path="res://.godot/imported/acorn.png-064a752cd7475de6faa35beb6ec19c56.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/acorn.png"
-dest_files=["res://.godot/imported/acorn.png-4f5bcb24cdf1e2df8094ad14b605e7b9.ctex"]
+source_file="res://assets/sprites/acorn.png"
+dest_files=["res://.godot/imported/acorn.png-064a752cd7475de6faa35beb6ec19c56.ctex"]
 
 [params]
 

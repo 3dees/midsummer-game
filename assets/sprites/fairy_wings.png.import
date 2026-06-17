@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bbk6rruu3qblh"
-path="res://.godot/imported/fairy_wings.png-7d048c32eb0ed62c6d13e0c2f1521ea1.ctex"
+path="res://.godot/imported/fairy_wings.png-885fa31d271068e9bd4c4ef71be89337.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/fairy_wings.png"
-dest_files=["res://.godot/imported/fairy_wings.png-7d048c32eb0ed62c6d13e0c2f1521ea1.ctex"]
+source_file="res://assets/sprites/fairy_wings.png"
+dest_files=["res://.godot/imported/fairy_wings.png-885fa31d271068e9bd4c4ef71be89337.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cx78jfmghcyk5"
-path="res://.godot/imported/moth.png-9e35afcbe0e09cf7b0a37ddae9a51138.ctex"
+path="res://.godot/imported/moth.png-e301284a35cf809802a7a7e67d9edd86.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/moth.png"
-dest_files=["res://.godot/imported/moth.png-9e35afcbe0e09cf7b0a37ddae9a51138.ctex"]
+source_file="res://assets/sprites/moth.png"
+dest_files=["res://.godot/imported/moth.png-e301284a35cf809802a7a7e67d9edd86.ctex"]
 
 [params]
 

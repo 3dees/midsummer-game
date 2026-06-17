@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bae01e4hl8xtc"
-path="res://.godot/imported/sunbeam.png-0e3ac4b780b88b2baf55abd9e74444d5.ctex"
+path="res://.godot/imported/sunbeam.png-4f2daca00f3b334c40af20a13509fa6a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/sunbeam.png"
-dest_files=["res://.godot/imported/sunbeam.png-0e3ac4b780b88b2baf55abd9e74444d5.ctex"]
+source_file="res://assets/sprites/sunbeam.png"
+dest_files=["res://.godot/imported/sunbeam.png-4f2daca00f3b334c40af20a13509fa6a.ctex"]
 
 [params]
 

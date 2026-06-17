@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dqrs2jodo8bp6"
-path="res://.godot/imported/dandelion.png-98b8c23e9fdf7eb3f77193c32ed1fbb4.ctex"
+path="res://.godot/imported/dandelion.png-ba2eeaa5bd300e8c52337ed8669646fc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/dandelion.png"
-dest_files=["res://.godot/imported/dandelion.png-98b8c23e9fdf7eb3f77193c32ed1fbb4.ctex"]
+source_file="res://assets/sprites/dandelion.png"
+dest_files=["res://.godot/imported/dandelion.png-ba2eeaa5bd300e8c52337ed8669646fc.ctex"]
 
 [params]
 
