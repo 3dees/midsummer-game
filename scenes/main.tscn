@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/game.gd" id="1_game"]
 [ext_resource type="Texture2D" path="res://assets/sprites/background.png" id="2_bg"]
+[ext_resource type="Theme" path="res://ui/theme.tres" id="3_theme"]
+[ext_resource type="Texture2D" path="res://assets/sprites/cabinet_clean.png" id="4_cabinet"]
+[ext_resource type="Texture2D" path="res://assets/sprites/orb.png" id="5_orb"]
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -10,6 +13,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("3_theme")
 script = ExtResource("1_game")
 
 [node name="Background" type="TextureRect" parent="."]
@@ -28,37 +32,152 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = 24.0
-offset_right = -24.0
-offset_bottom = -24.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 
-[node name="Hud" type="Label" parent="Layout"]
+[node name="HudPanel" type="PanelContainer" parent="Layout"]
 layout_mode = 2
-text = "Tithe 1/12 · First Light"
-horizontal_alignment = 1
-autowrap_mode = 2
 
-[node name="Grid" type="GridContainer" parent="Layout"]
+[node name="HudBox" type="VBoxContainer" parent="Layout/HudPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ChipsRow" type="HBoxContainer" parent="Layout/HudPanel/HudBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 24
+
+[node name="OrbChip" type="Label" parent="Layout/HudPanel/HudBox/ChipsRow"]
+layout_mode = 2
+theme_type_variation = &"CurrencyLabel"
+text = "Light 0"
+
+[node name="RerollChip" type="Label" parent="Layout/HudPanel/HudBox/ChipsRow"]
+layout_mode = 2
+theme_type_variation = &"CurrencyLabel"
+text = "Reroll 0"
+
+[node name="RemovalChip" type="Label" parent="Layout/HudPanel/HudBox/ChipsRow"]
+layout_mode = 2
+theme_type_variation = &"CurrencyLabel"
+text = "Removal 0"
+
+[node name="SubLine" type="Label" parent="Layout/HudPanel/HudBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Spin 0/5 · Tithe 1/12: 0/0"
+horizontal_alignment = 1
+
+[node name="CabinetAspect" type="AspectRatioContainer" parent="Layout"]
 layout_mode = 2
 size_flags_vertical = 3
+ratio = 0.6666667
+stretch_mode = 2
+
+[node name="Cabinet" type="Control" parent="Layout/CabinetAspect"]
+layout_mode = 2
+
+[node name="CabinetImg" type="TextureRect" parent="Layout/CabinetAspect/Cabinet"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_cabinet")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Grid" type="GridContainer" parent="Layout/CabinetAspect/Cabinet"]
+layout_mode = 1
+anchor_left = 0.2324219
+anchor_top = 0.2838542
+anchor_right = 0.7607422
+anchor_bottom = 0.565625
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/h_separation = 0
+theme_override_constants/v_separation = 0
 columns = 5
 
+[node name="StatusBox" type="VBoxContainer" parent="Layout/CabinetAspect/Cabinet"]
+layout_mode = 1
+anchor_left = 0.2324219
+anchor_top = 0.5657552
+anchor_right = 0.7607422
+anchor_bottom = 0.6673177
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="SeasonRound" type="Label" parent="Layout/CabinetAspect/Cabinet/StatusBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "FIRST LIGHT · ROUND 1"
+horizontal_alignment = 1
+
+[node name="SpinsToBell" type="Label" parent="Layout/CabinetAspect/Cabinet/StatusBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "0 spins to the bell"
+horizontal_alignment = 1
+
+[node name="ProgressRow" type="HBoxContainer" parent="Layout/CabinetAspect/Cabinet/StatusBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitheBar" type="ProgressBar" parent="Layout/CabinetAspect/Cabinet/StatusBox/ProgressRow"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+show_percentage = false
+
+[node name="BellIcon" type="TextureRect" parent="Layout/CabinetAspect/Cabinet/StatusBox/ProgressRow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("5_orb")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="SpinButton" type="Button" parent="Layout"]
-custom_minimum_size = Vector2(0, 96)
+custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 text = "SPIN"
 
 [node name="BagButton" type="Button" parent="Layout"]
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
-text = "Bag (✕removal)"
+theme_type_variation = &"SecondaryButton"
+text = "Bag"
 
-[node name="DraftPanel" type="PanelContainer" parent="."]
+[node name="DraftLayer" type="Control" parent="."]
 visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="DraftLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="DraftLayer"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -68,29 +187,66 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="DraftBox" type="VBoxContainer" parent="DraftPanel"]
+[node name="DraftBox" type="VBoxContainer" parent="DraftLayer/Panel"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="DraftTitle" type="Label" parent="DraftPanel/DraftBox"]
+[node name="DraftTitle" type="Label" parent="DraftLayer/Panel/DraftBox"]
 layout_mode = 2
-text = "Choose a blessing"
+theme_type_variation = &"TitleLabel"
+text = "Add a symbol?"
 horizontal_alignment = 1
 
-[node name="DraftCards" type="HBoxContainer" parent="DraftPanel/DraftBox"]
+[node name="DraftSub" type="Label" parent="DraftLayer/Panel/DraftBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Pick one to add to your pool — it will appear in future spins. Or skip to keep your pool lean."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DraftCards" type="HBoxContainer" parent="DraftLayer/Panel/DraftBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="RerollButton" type="Button" parent="DraftPanel/DraftBox"]
+[node name="ButtonRow" type="HBoxContainer" parent="DraftLayer/Panel/DraftBox"]
 layout_mode = 2
-text = "Reroll (↺)"
+alignment = 1
+theme_override_constants/separation = 12
 
-[node name="SkipButton" type="Button" parent="DraftPanel/DraftBox"]
+[node name="DraftBagButton" type="Button" parent="DraftLayer/Panel/DraftBox/ButtonRow"]
 layout_mode = 2
+theme_type_variation = &"SecondaryButton"
+text = "Bag"
+
+[node name="RerollButton" type="Button" parent="DraftLayer/Panel/DraftBox/ButtonRow"]
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
+text = "Reroll"
+
+[node name="SkipButton" type="Button" parent="DraftLayer/Panel/DraftBox/ButtonRow"]
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
 text = "Skip"
 
-[node name="BagPanel" type="PanelContainer" parent="."]
+[node name="BagLayer" type="Control" parent="."]
 visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="BagLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="BagLayer"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -100,25 +256,65 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="BagBox" type="VBoxContainer" parent="BagPanel"]
+[node name="BagBox" type="VBoxContainer" parent="BagLayer/Panel"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="BagTitle" type="Label" parent="BagPanel/BagBox"]
+[node name="BagTitle" type="Label" parent="BagLayer/Panel/BagBox"]
 layout_mode = 2
-text = "Your symbols"
+theme_type_variation = &"TitleLabel"
+text = "Bag"
 horizontal_alignment = 1
 
-[node name="BagScroll" type="ScrollContainer" parent="BagPanel/BagBox"]
-custom_minimum_size = Vector2(360, 520)
+[node name="TabRow" type="HBoxContainer" parent="BagLayer/Panel/BagBox"]
 layout_mode = 2
+theme_override_constants/separation = 8
 
-[node name="BagList" type="VBoxContainer" parent="BagPanel/BagBox/BagScroll"]
+[node name="TabSymbols" type="Button" parent="BagLayer/Panel/BagBox/TabRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+text = "SYMBOLS"
 
-[node name="BagClose" type="Button" parent="BagPanel/BagBox"]
+[node name="TabItems" type="Button" parent="BagLayer/Panel/BagBox/TabRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+disabled = true
+text = "ITEMS — Coming soon"
+
+[node name="TabEssences" type="Button" parent="BagLayer/Panel/BagBox/TabRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+disabled = true
+text = "ESSENCES — Coming soon"
+
+[node name="RemovalBar" type="PanelContainer" parent="BagLayer/Panel/BagBox"]
+layout_mode = 2
+
+[node name="RemovalLabel" type="Label" parent="BagLayer/Panel/BagBox/RemovalBar"]
+layout_mode = 2
+theme_type_variation = &"CurrencyLabel"
+text = "× 0 Removal Orbs"
+
+[node name="HelperText" type="Label" parent="BagLayer/Panel/BagBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = ""
+autowrap_mode = 2
+
+[node name="BagScroll" type="ScrollContainer" parent="BagLayer/Panel/BagBox"]
+custom_minimum_size = Vector2(480, 460)
+layout_mode = 2
+
+[node name="BagGrid" type="GridContainer" parent="BagLayer/Panel/BagBox/BagScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 4
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+
+[node name="BagClose" type="Button" parent="BagLayer/Panel/BagBox"]
 layout_mode = 2
 text = "Close"
 
@@ -132,6 +328,7 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
+theme_type_variation = &"TitleLabel"
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 1

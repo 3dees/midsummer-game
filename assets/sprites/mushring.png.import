@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://clsxxdits6qv5"
-path="res://.godot/imported/mushring.png-7ac739a094387c26dd3167f563d43564.ctex"
+path="res://.godot/imported/mushring.png-f67ccb23816a72bf20e3c0f26d3557d1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/mushring.png"
-dest_files=["res://.godot/imported/mushring.png-7ac739a094387c26dd3167f563d43564.ctex"]
+source_file="res://assets/sprites/mushring.png"
+dest_files=["res://.godot/imported/mushring.png-f67ccb23816a72bf20e3c0f26d3557d1.ctex"]
 
 [params]
 

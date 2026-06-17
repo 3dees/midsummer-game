@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ba3238opvrb51"
-path="res://.godot/imported/foxglove.png-1e7bd863e66e4a9f08eb7c511a8551d0.ctex"
+path="res://.godot/imported/foxglove.png-d67843e287439716fff8eeea76006db0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/foxglove.png"
-dest_files=["res://.godot/imported/foxglove.png-1e7bd863e66e4a9f08eb7c511a8551d0.ctex"]
+source_file="res://assets/sprites/foxglove.png"
+dest_files=["res://.godot/imported/foxglove.png-d67843e287439716fff8eeea76006db0.ctex"]
 
 [params]
 

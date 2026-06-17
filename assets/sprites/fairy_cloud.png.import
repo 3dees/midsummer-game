@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bw7adtafht3dj"
-path="res://.godot/imported/fairy_cloud.png-0fc0bf72d4a4411b2360c0ce91826408.ctex"
+path="res://.godot/imported/fairy_cloud.png-0e50571a7fb235eb269f05fce874916c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/fairy_cloud.png"
-dest_files=["res://.godot/imported/fairy_cloud.png-0fc0bf72d4a4411b2360c0ce91826408.ctex"]
+source_file="res://assets/sprites/fairy_cloud.png"
+dest_files=["res://.godot/imported/fairy_cloud.png-0e50571a7fb235eb269f05fce874916c.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://yltngeqk5fj0"
-path="res://.godot/imported/firefly.png-6f51ec463addaba76422515a3f9ecfee.ctex"
+path="res://.godot/imported/firefly.png-82bfd5b29453bd2b5a0d51e97c7756b8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/firefly.png"
-dest_files=["res://.godot/imported/firefly.png-6f51ec463addaba76422515a3f9ecfee.ctex"]
+source_file="res://assets/sprites/firefly.png"
+dest_files=["res://.godot/imported/firefly.png-82bfd5b29453bd2b5a0d51e97c7756b8.ctex"]
 
 [params]
 

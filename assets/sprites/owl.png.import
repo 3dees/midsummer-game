@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dyrd38ti685il"
-path="res://.godot/imported/owl.png-a7c6516996403662ac3f216bac85b0ac.ctex"
+path="res://.godot/imported/owl.png-7aac28bb17eb353afdad3c4001fba2fc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/owl.png"
-dest_files=["res://.godot/imported/owl.png-a7c6516996403662ac3f216bac85b0ac.ctex"]
+source_file="res://assets/sprites/owl.png"
+dest_files=["res://.godot/imported/owl.png-7aac28bb17eb353afdad3c4001fba2fc.ctex"]
 
 [params]
 

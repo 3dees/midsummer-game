@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bfpfkl4n5x8v4"
-path="res://.godot/imported/standing_stone.png-ff4bf40637852199ace8685459a09b1e.ctex"
+path="res://.godot/imported/standing_stone.png-b04b86991779d9417e5c0d513f80546f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/standing_stone.png"
-dest_files=["res://.godot/imported/standing_stone.png-ff4bf40637852199ace8685459a09b1e.ctex"]
+source_file="res://assets/sprites/standing_stone.png"
+dest_files=["res://.godot/imported/standing_stone.png-b04b86991779d9417e5c0d513f80546f.ctex"]
 
 [params]
 

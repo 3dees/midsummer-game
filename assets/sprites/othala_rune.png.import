@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b3tw35vd51evi"
-path="res://.godot/imported/othala_rune.png-1fbeb9d22f9ddf173e205ab345a7ad01.ctex"
+path="res://.godot/imported/othala_rune.png-5a2398b4d98563a3473e07e5b479e1c5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/othala_rune.png"
-dest_files=["res://.godot/imported/othala_rune.png-1fbeb9d22f9ddf173e205ab345a7ad01.ctex"]
+source_file="res://assets/sprites/othala_rune.png"
+dest_files=["res://.godot/imported/othala_rune.png-5a2398b4d98563a3473e07e5b479e1c5.ctex"]
 
 [params]
 

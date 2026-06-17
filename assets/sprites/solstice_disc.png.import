@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ejt8s83uvjx1"
-path="res://.godot/imported/solstice_disc.png-ba1d30e80eed5815dc44f2b3db92ec32.ctex"
+path="res://.godot/imported/solstice_disc.png-f251ad73e6c3f9c38c0affaf61121deb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/solstice_disc.png"
-dest_files=["res://.godot/imported/solstice_disc.png-ba1d30e80eed5815dc44f2b3db92ec32.ctex"]
+source_file="res://assets/sprites/solstice_disc.png"
+dest_files=["res://.godot/imported/solstice_disc.png-f251ad73e6c3f9c38c0affaf61121deb.ctex"]
 
 [params]
 

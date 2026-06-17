@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://jroletrblg4h"
-path="res://.godot/imported/fern.png-2ed433c610dfad678b370eb50f72be76.ctex"
+path="res://.godot/imported/fern.png-65d5d45e212625c3e5bbb7c03ee37a68.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://midsummer/assets/sprites/fern.png"
-dest_files=["res://.godot/imported/fern.png-2ed433c610dfad678b370eb50f72be76.ctex"]
+source_file="res://assets/sprites/fern.png"
+dest_files=["res://.godot/imported/fern.png-65d5d45e212625c3e5bbb7c03ee37a68.ctex"]
 
 [params]
 
