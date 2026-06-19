@@ -37,7 +37,11 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var orb_chip: Label = $Layout/HudPanel/HudBox/HudTop/ChipsRow/OrbChipBox/OrbChip
 @onready var reroll_chip: Label = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RerollChipBox/RerollChip
 @onready var removal_chip: Label = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RemovalChipBox/RemovalChip
+@onready var orb_chip_box: HBoxContainer = $Layout/HudPanel/HudBox/HudTop/ChipsRow/OrbChipBox
+@onready var reroll_chip_box: HBoxContainer = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RerollChipBox
+@onready var removal_chip_box: HBoxContainer = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RemovalChipBox
 @onready var mute_button: Button = $Layout/HudPanel/HudBox/HudTop/MuteButton
+@onready var speed_button: Button = $Layout/HudPanel/HudBox/HudTop/SpeedButton
 @onready var music: AudioStreamPlayer = $Music
 @onready var sub_line: Label = $Layout/HudPanel/HudBox/SubLine
 @onready var season_round: Label = $Layout/CabinetAspect/Cabinet/StatusBox/SeasonRound
@@ -60,23 +64,36 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var message_label: Label = $MessageLabel
 @onready var log_lines: VBoxContainer = $Layout/SpinLog/LogScroll/LogLines
 
-# --- Tier 4 score-reveal timing (ported from play.tsx reveal logic) ---
+# --- Score-reveal timing (two macro-phases: choreography, then tally) ---
 const REVEAL_FLOAT_LINGER := 0.78   # "+N" float rise + fade duration (~780ms)
-const PASS1_CADENCE := 0.07         # Pass 1 base-score sweep cadence (70ms)
-const PASS_PAUSE := 0.25            # pause between Pass 1 and Pass 2 (250ms)
-const PASS2_CADENCE := 0.16         # Pass 2 synergy sweep cadence (160ms)
-const BOUNCE_HOP := 14.0            # vertical hop height (px) for the synergy bounce
-const BOUNCE_DUR := 0.32            # total hop duration (~320ms)
-const DRAFT_PAUSE := 0.35          # beat after the last bounce settles before the draft opens
+const CHOREO_GAP := 0.10            # Phase 1: gap between adjacency pair beats (100ms)
+const PHASE_BEAT := 0.25            # beat between Phase 1 (choreo) and Phase 2 (tally)
+const TALLY_BASE_CADENCE := 0.06    # Phase 2: base-value sweep cadence (60ms)
+const TALLY_SYN_CADENCE := 0.10     # Phase 2: synergy float cadence (100ms)
+const TALLY_GLOBAL_PAUSE := 0.18    # Phase 2: pause before the global apply
+const BANK_PAUSE := 0.30            # pause once the tally reaches the spin total
+const BANK_DUR := 0.45              # count-up / fly-into-Light bank animation
+const BOUNCE_COUNT := 3             # hops per synergy group (settling bounce)
+const BOUNCE_HOP := 14.0            # first hop height (px); decays each hop
+const BOUNCE_DECAY := 0.62          # amplitude multiplier per hop (~14 -> 9 -> 5px)
+const BOUNCE_HOP_DUR := 0.15        # duration of one hop (~150ms); 3 hops ~= 450ms
+const DRAFT_PAUSE := 0.35           # beat after the tally banks before the draft opens
 var _revealing := false
+var _skip := false                  # tap-to-skip: jump to the final committed state
+var _spin_total_label: Label = null # transient "+this spin" counter (created lazily)
+var _reveal_tweens: Array = []      # active reveal tweens, killed on skip/finalize
+var _cell_base_y := {}              # bounced cells' rest Y, to restore on skip
+
+# Animation speed: 1.0 normal, 2.0 fast, 0.0 = off (apply final scores instantly).
+@export var anim_speed := 1.0
 
 # --- Tier 5 slot-reel spin timing ---
 const SPIN_SPEED := 1800.0          # constant reel scroll speed, px/s (same for every column)
 const SPIN_BASE_DURATION := 0.42    # column 0 stop time; later columns spin longer at the same speed
 const SPIN_COL_STAGGER := 0.10      # stagger between column stops, left -> right (100ms)
-const SPIN_SETTLE := 0.16           # final overshoot-settle segment per column (TRANS_BACK)
-const SPIN_CELL_INSET := 4.0        # inset reel symbols to match the settled sprite (slot content margin)
-const SPIN_BLUR := 0.018            # vertical-blur strength while spinning (eased to 0)
+const SPIN_DECEL := 0.22            # smooth ease-out tail that glides the reel onto the finals
+const SPIN_DECEL_CELLS := 0.7       # how many cells the deceleration tail spans (short = crisp)
+const SPIN_BLUR := 0.0              # vertical-blur strength (0 = off; 9-tap shader ghosted on pixel art)
 var _spinning := false
 var _reel_mats: Array = []          # one ShaderMaterial per column (vertical blur)
 var _spin_textures: Array = []      # filler textures cycled on the reels
@@ -101,10 +118,35 @@ func _ready() -> void:
 	draft_bag_button.pressed.connect(_on_bag_open)
 	bag_close.pressed.connect(_on_bag_close)
 	mute_button.pressed.connect(_on_toggle_music)
+	speed_button.pressed.connect(_on_cycle_speed)
+	_update_speed_button()
 	# mp3 streams don't carry a loop flag from import; set it so the theme loops.
 	if music.stream is AudioStreamMP3:
 		music.stream.loop = true
 	_start_run()
+
+# Tap anywhere during the spin/reveal to skip straight to the final committed state.
+func _input(event: InputEvent) -> void:
+	if not (_spinning or _revealing) or _skip:
+		return
+	var pressed: bool = (event is InputEventMouseButton and event.pressed) \
+		or (event is InputEventScreenTouch and event.pressed)
+	if pressed:
+		_skip = true
+
+# Cycle animation speed: 1x -> 2x -> Off -> 1x. Scales all reveal/spin timings; Off
+# applies final scores instantly with no choreography or tally.
+func _on_cycle_speed() -> void:
+	if anim_speed == 1.0:
+		anim_speed = 2.0
+	elif anim_speed == 2.0:
+		anim_speed = 0.0
+	else:
+		anim_speed = 1.0
+	_update_speed_button()
+
+func _update_speed_button() -> void:
+	speed_button.text = "Anim: Off" if anim_speed <= 0.0 else "Anim: %dx" % int(anim_speed)
 
 func _on_toggle_music() -> void:
 	var bus := AudioServer.get_bus_index("Music")
@@ -184,6 +226,7 @@ func _start_run() -> void:
 func _on_spin() -> void:
 	if not running or _revealing or _spinning:
 		return
+	_skip = false
 	grid = MidsummerEngine.roll_grid(pool)
 	var ctx := {
 		"total_spins": total_spins,
@@ -227,10 +270,21 @@ func _on_spin() -> void:
 # No re-roll: the strips end on exactly `final_grid`, which `_play_reveal` scores.
 func _play_spin(final_grid: Array) -> void:
 	_spinning = true
-	await get_tree().process_frame              # ensure the grid has a laid-out size
-	var cw := grid_box.size.x / float(COLS)
-	var ch := grid_box.size.y / float(ROWS)
-	if cw <= 0.0 or ch <= 0.0:                   # no layout (e.g. headless) — skip cleanly
+	await get_tree().process_frame              # ensure the grid cells have laid-out rects
+	await get_tree().process_frame              # second frame: containers settle their final rects
+	# Geometry taken from the REAL settled cells so the reel lands pixel-identical
+	# (no shift/size-pop on handoff). Row pitch = distance between stacked cell tops.
+	# layer overlays grid_box exactly (same parent, same position), so cells map into
+	# layer space by subtracting grid_box's own global position — NOT the parent's.
+	var layer_gp: Vector2 = grid_box.global_position
+	# Capture every cell's global rect NOW, while still visible and container-constrained.
+	# (Reading size after hiding releases the constraint and the TextureRect reverts to its
+	# native 64px texture size — that mismatch was the spin "shift".)
+	var cell_rects: Array = []
+	for cell in _cells:
+		cell_rects.append((cell as TextureRect).get_global_rect())
+	var ch: float = cell_rects[COLS].position.y - cell_rects[0].position.y
+	if ch <= 0.0 or anim_speed <= 0.0 or _skip:  # no layout / speed off / skipped — apply instantly
 		_render_grid()
 		_spinning = false
 		return
@@ -252,44 +306,59 @@ func _play_spin(final_grid: Array) -> void:
 	# filler) so they stop later. Stop time per column = base + c*stagger.
 	var max_dur := 0.0
 	for c in COLS:
+		var top_rect: Rect2 = cell_rects[c]      # row 0 of this column (pre-hide, real size)
+		var cw := top_rect.size.x
+		var cell_h := top_rect.size.y
+		var origin: Vector2 = top_rect.position - layer_gp   # column origin in layer space
+
+		# Clip exactly to this column's real extent (row 0 top -> last row bottom) so the
+		# reel can never spill past the grid window, even if pitch != cell height.
+		var last_rect: Rect2 = cell_rects[(ROWS - 1) * COLS + c]
+		var col_h: float = (last_rect.position.y + last_rect.size.y) - top_rect.position.y
 		var colctrl := Control.new()
-		colctrl.position = Vector2(c * cw, 0.0)
-		colctrl.size = Vector2(cw, ch * ROWS)
+		colctrl.position = origin
+		colctrl.size = Vector2(cw, col_h)
 		colctrl.clip_contents = true
 		colctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		layer.add_child(colctrl)
 
 		var strip := Control.new()
 		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var mat: ShaderMaterial = _reel_mats[c]
-		mat.set_shader_parameter("strength", SPIN_BLUR)
-		strip.material = mat
+		var mat: ShaderMaterial = null
+		if SPIN_BLUR > 0.0:                       # blur off by default — avoids the pixel-art ghosting
+			mat = _reel_mats[c]
+			mat.set_shader_parameter("strength", SPIN_BLUR)
+			strip.material = mat
 		colctrl.add_child(strip)
 
 		# Filler count sized so a constant-speed scroll lasts this column's stop time.
 		var stop_t := SPIN_BASE_DURATION + c * SPIN_COL_STAGGER
 		var n_filler: int = maxi(ROWS + 6, int(round(SPIN_SPEED * stop_t / ch)))
 		for f in n_filler:
-			_add_reel_cell(strip, _spin_textures[randi() % _spin_textures.size()], f, cw, ch)
+			_add_reel_cell(strip, _spin_textures[randi() % _spin_textures.size()], f, cw, cell_h, ch)
 		for r in ROWS:
 			var idx: int = r * COLS + c
 			var tile = final_grid[idx] if idx < final_grid.size() else null
 			var tex: Texture2D = _texture_for(String(tile["id"])) if tile != null else null
-			_add_reel_cell(strip, tex, n_filler + r, cw, ch)
+			_add_reel_cell(strip, tex, n_filler + r, cw, cell_h, ch)
 		strip.position.y = 0.0                   # start with fillers in view
 
-		# Constant-speed linear scroll, then a short overshoot settle onto the finals.
-		var rest := -n_filler * ch
-		var settle_d := ch * 0.5
-		var lin_dur: float = (n_filler * ch - settle_d) / SPIN_SPEED
+		# Constant-speed linear scroll for the bulk, then a smooth cubic ease-out tail that
+		# glides the reel onto the (centered) finals — no overshoot, no snap. anim_speed
+		# scales the whole spin (fast = shorter); guarded > 0 above.
+		var rest: float = -n_filler * ch
+		var decel_dist: float = ch * SPIN_DECEL_CELLS
+		var lin_dur: float = maxf(0.0, n_filler * ch - decel_dist) / SPIN_SPEED / anim_speed
+		var decel_dur: float = SPIN_DECEL / anim_speed
 		var tw := create_tween()
-		tw.tween_property(strip, "position:y", rest + settle_d, lin_dur).set_trans(Tween.TRANS_LINEAR)
-		tw.tween_property(strip, "position:y", rest, SPIN_SETTLE).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		var dur := lin_dur + SPIN_SETTLE
+		tw.tween_property(strip, "position:y", rest + decel_dist, lin_dur).set_trans(Tween.TRANS_LINEAR)
+		tw.tween_property(strip, "position:y", rest, decel_dur).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		var dur := lin_dur + decel_dur
 		max_dur = max(max_dur, dur)
-		var mtw := create_tween()                # ease the blur off over the back half
-		mtw.tween_interval(dur * 0.55)
-		mtw.tween_property(mat, "shader_parameter/strength", 0.0, dur * 0.45)
+		if mat != null:                          # ease the blur off over the back half
+			var mtw := create_tween()
+			mtw.tween_interval(dur * 0.55)
+			mtw.tween_property(mat, "shader_parameter/strength", 0.0, dur * 0.45)
 		tw.finished.connect(_on_column_settled.bind(c, layer))
 
 	await get_tree().create_timer(max_dur + 0.05).timeout
@@ -309,14 +378,17 @@ func _on_column_settled(c: int, layer: Control) -> void:
 	if is_instance_valid(layer) and c < layer.get_child_count():
 		layer.get_child(c).visible = false
 
-func _add_reel_cell(strip: Control, tex: Texture2D, row: int, cw: float, ch: float) -> void:
+func _add_reel_cell(strip: Control, tex: Texture2D, row: int, cell_w: float, cell_h: float, pitch: float) -> void:
 	var rc := TextureRect.new()
-	rc.texture = tex
-	# Inset to match the settled sprite (slot content margin) — no size-pop on handoff.
-	rc.position = Vector2(SPIN_CELL_INSET, row * ch + SPIN_CELL_INSET)
-	rc.size = Vector2(cw - 2.0 * SPIN_CELL_INSET, ch - 2.0 * SPIN_CELL_INSET)
+	# expand_mode MUST be set before size: with the default KEEP_SIZE, the texture's
+	# native 64px becomes the min size and clamps size up to 64 (the spin oversize bug).
 	rc.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rc.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rc.texture = tex
+	# Match the real cell's draw rect exactly (origin already carries the inset);
+	# stack by row pitch so the final row lands pixel-identical to the settled sprite.
+	rc.position = Vector2(0.0, row * pitch)
+	rc.size = Vector2(cell_w, cell_h)
 	rc.use_parent_material = true                # render through the strip's blur shader
 	rc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	strip.add_child(rc)
@@ -351,29 +423,74 @@ func _build_spin_textures() -> Array:
 
 # --- Tier 4: sequential score reveal -------------------------------------
 
-# Two-pass (LBaL-style) reveal. Pass 1: float each cell's printed base value in
-# reading order (fast, no bounce). Pass 2: walk the synergy events in anchor-cell
-# order, bouncing each synergy's cells together and floating its bonus. Running
-# total shows on the HUD Light chip; snapped to the authoritative score at the end.
+# Two macro-phases (LBaL-style):
+#   PHASE 1 — Choreography: bounces only, no numbers, score frozen.
+#   PHASE 2 — Tally: a transient "+this spin" counter climbs as cells pay in
+#             (no bounces), then banks into the persistent Light total.
+# Tap-to-skip / anim_speed=0 jump straight to the final committed state.
 func _play_reveal(score: Dictionary) -> void:
 	_revealing = true
 	_reset_reveal()
-	var events: Array = score["events"]
-	var syn_events: Array = []
-	for ev in events:
-		if String(ev["kind"]) == "synergy":
-			syn_events.append(ev)
 
-	# Header line for the log.
-	var head := Label.new()
-	head.theme_type_variation = &"CurrencyLabel"
-	head.add_theme_font_size_override("font_size", 14)
-	head.text = "Spin %d · +%d Light" % [total_spins + 1, int(score["orbs"])]
-	log_lines.add_child(head)
+	# Bucket events.
+	var pairs: Array = []           # adjacentBonus — pair beats (bounce)
+	var locals: Array = []          # self/local effects — float only, never bounce
+	var globals: Array = []         # globalBonus / globalMultiplier — finale
+	var rewards: Array = []         # reward-orb triggers — chip flash
+	for ev in score["events"]:
+		if String(ev["kind"]) != "synergy":
+			continue
+		var t := String(ev.get("synergy_type", ""))
+		if ev.has("reward_amount"):
+			rewards.append(ev)
+		elif t == "globalBonus" or t == "globalMultiplier":
+			globals.append(ev)
+		elif t == "adjacentBonus":
+			pairs.append(ev)
+		else:
+			locals.append(ev)
 
+	_log_header(score)
+	orb_chip.text = "%d" % orbs                # score frozen through Phases 1-2
+
+	# Off / already-skipped: apply the final state instantly.
+	if anim_speed <= 0.0 or _skip:
+		_finalize_reveal(score)
+		_revealing = false
+		return
+
+	# Let the landed reel settle visibly still before any choreography bounce, so a
+	# synergy cell doesn't appear to "hop" the instant it lands.
+	await _sleep(PHASE_BEAT)
+	if _skip:
+		_finalize_reveal(score); _revealing = false; return
+
+	# ---------- PHASE 1 — Choreography (bounces only, no numbers) ----------
+	pairs.sort_custom(_phase2_before)          # reading order, anchored at the later cell
+	for ev in pairs:
+		for ci in ev.get("cells", [int(ev["cell"])]):
+			_bounce_cell(int(ci))
+		await _sleep(BOUNCE_COUNT * BOUNCE_HOP_DUR)
+		if _skip: break
+		await _sleep(CHOREO_GAP)
+		if _skip: break
+	if not _skip and not globals.is_empty():   # global finale: all involved cells, once
+		var gcells := {}
+		for ev in globals:
+			for ci in ev.get("cells", [int(ev["cell"])]):
+				gcells[int(ci)] = true
+		for ci in gcells.keys():
+			_bounce_cell(int(ci))
+		await _sleep(BOUNCE_COUNT * BOUNCE_HOP_DUR)
+	if _skip:
+		_finalize_reveal(score); _revealing = false; return
+
+	await _sleep(PHASE_BEAT)
+
+	# ---------- PHASE 2 — Tally (numbers count up, no bounces) ----------
+	_show_spin_total()
 	var run := 0
-
-	# --- Pass 1: base scores, reading order, fast, no bounce ---
+	# Base sweep, reading order.
 	for i in _cells.size():
 		var tile = grid[i] if i < grid.size() else null
 		if tile == null:
@@ -382,48 +499,183 @@ func _play_reveal(score: Dictionary) -> void:
 		if base <= 0:
 			continue
 		run += base
-		orb_chip.text = "%d" % (orbs + run)
+		_set_spin_total(run)
 		_spawn_float(i, base)
-		await get_tree().create_timer(PASS1_CADENCE).timeout
-
-	# --- Pass 2: synergies, ordered by anchor (earliest cell), bounce + bonus ---
-	if not syn_events.is_empty():
-		await get_tree().create_timer(PASS_PAUSE).timeout
-		syn_events.sort_custom(func(a, b): return _anchor_cell(a) < _anchor_cell(b))
-		for ev in syn_events:
+		await _sleep(TALLY_BASE_CADENCE)
+		if _skip: break
+	# Synergy bonuses (pairs + locals), reading order; multipliers float but don't add.
+	if not _skip:
+		var syn := pairs + locals
+		syn.sort_custom(_phase2_before)
+		for ev in syn:
 			var anchor := _anchor_cell(ev)
-			# Score synergies bounce their whole group; plain reward-orb triggers
-			# (reroll/removal) only flash their float — no bounce.
-			var is_score_synergy: bool = ev.has("orbs_delta") or ev.has("multiplier")
-			if is_score_synergy:
-				for ci in ev.get("cells", [int(ev["cell"])]):
-					_bounce_cell(int(ci))
 			if ev.has("orbs_delta"):
 				run += int(ev["orbs_delta"])
-				orb_chip.text = "%d" % (orbs + run)
+				_set_spin_total(run)
 				_spawn_float(anchor, int(ev["orbs_delta"]))
 			elif ev.has("multiplier"):
 				_spawn_text(anchor, "×%s" % _fmt_num(float(ev["multiplier"])))
-			elif ev.has("reward_amount"):
-				_spawn_text(anchor, "+%d %s" % [int(ev["reward_amount"]), _reward_str(ev.get("reward_kind", ""))])
 			_add_log_line(ev)
-			await get_tree().create_timer(PASS2_CADENCE).timeout
+			await _sleep(TALLY_SYN_CADENCE)
+			if _skip: break
+	# Reward-orb flashes on the reroll/removal chips.
+	for ev in rewards:
+		_flash_reward(ev)
+		_add_log_line(ev)
+	# Globals last (multipliers land last); snap the transient to the authoritative total.
+	if not _skip and not globals.is_empty():
+		await _sleep(TALLY_GLOBAL_PAUSE)
+		for ev in globals:
+			var anchor := _anchor_cell(ev)
+			if ev.has("orbs_delta"):
+				_spawn_float(anchor, int(ev["orbs_delta"]))
+			elif ev.has("multiplier"):
+				_spawn_text(anchor, "×%s" % _fmt_num(float(ev["multiplier"])))
+			_add_log_line(ev)
+	_set_spin_total(int(score["orbs"]))
 
-	# Snap to the authoritative total (absorbs multiplier / rounding) before commit.
-	orb_chip.text = "%d" % (orbs + int(score["orbs"]))
-	# Let the final bounce fully settle, then a slight beat, before the draft opens.
-	if not syn_events.is_empty():
-		await get_tree().create_timer(BOUNCE_DUR).timeout
-	await get_tree().create_timer(DRAFT_PAUSE).timeout
+	if _skip:
+		_finalize_reveal(score); _revealing = false; return
+
+	# ---------- Bank the spin total into the persistent Light chip ----------
+	await _sleep(BANK_PAUSE)
+	_bank_spin_total(int(score["orbs"]), orbs)
+	await _sleep(BANK_DUR)
+	await _sleep(DRAFT_PAUSE)
 	_revealing = false
 
-# Earliest (reading-order) cell of a synergy event — its anchor for ordering.
+# --- reveal helpers ------------------------------------------------------
+
+# Scaled, skippable wait. anim_speed scales every Phase 1/2 timing; a pending skip
+# (or speed 0) returns immediately so the loops blast through to the finalize.
+func _sleep(sec: float) -> void:
+	if _skip or anim_speed <= 0.0:
+		return
+	await get_tree().create_timer(sec / anim_speed).timeout
+
+# Jump to the final committed visual state: drop animations, fill the log, hide the
+# transient counter, and set the Light chip to its post-bank value.
+func _finalize_reveal(score: Dictionary) -> void:
+	for tw in _reveal_tweens:
+		if tw is Tween and tw.is_valid():
+			tw.kill()
+	_reveal_tweens.clear()
+	for cell in _cells:
+		cell.scale = Vector2.ONE
+		for child in cell.get_children():
+			if child is Label:
+				child.queue_free()
+	for i in _cell_base_y:                      # restore any cell frozen mid-hop
+		_cells[i].position.y = _cell_base_y[i]
+	_cell_base_y.clear()
+	_fill_log(score)
+	if is_instance_valid(_spin_total_label):
+		_spin_total_label.visible = false
+	orb_chip.text = "%d" % (orbs + int(score["orbs"]))
+
+func _log_header(score: Dictionary) -> void:
+	var head := Label.new()
+	head.theme_type_variation = &"CurrencyLabel"
+	head.add_theme_font_size_override("font_size", 14)
+	head.text = "Spin %d · +%d Light" % [total_spins + 1, int(score["orbs"])]
+	log_lines.add_child(head)
+
+# Rebuild the whole log (used on skip/off so no synergy line is missed).
+func _fill_log(score: Dictionary) -> void:
+	for line in log_lines.get_children():
+		line.queue_free()
+	_log_header(score)
+	for ev in score["events"]:
+		if String(ev["kind"]) == "synergy":
+			_add_log_line(ev)
+
+# Transient "+this spin" counter, floating just below the Light chip, green to read
+# as distinct from the gold persistent total.
+func _show_spin_total() -> void:
+	if not is_instance_valid(_spin_total_label):
+		_spin_total_label = Label.new()
+		_spin_total_label.theme_type_variation = &"CurrencyLabel"
+		_spin_total_label.add_theme_color_override("font_color", Color(0.45, 0.92, 0.55))
+		_spin_total_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_spin_total_label.z_index = 25
+		add_child(_spin_total_label)
+		_spin_total_label.set_as_top_level(true)
+	_spin_total_label.modulate = Color(1, 1, 1, 1)
+	_spin_total_label.visible = true
+	_spin_total_label.text = "+0"
+	_spin_total_label.global_position = orb_chip_box.global_position + Vector2(0.0, orb_chip_box.size.y + 2.0)
+
+func _set_spin_total(n: int) -> void:
+	if is_instance_valid(_spin_total_label):
+		_spin_total_label.text = "+%d" % n
+
+# Count the Light chip up by the spin amount while the transient counter flies into
+# the chip and fades.
+func _bank_spin_total(spin_amount: int, start_orbs: int) -> void:
+	var dur := BANK_DUR / maxf(anim_speed, 0.001)
+	var ct := create_tween()
+	ct.tween_method(func(v: float) -> void: orb_chip.text = "%d" % int(round(v)),
+		float(start_orbs), float(start_orbs + spin_amount), dur)
+	_reveal_tweens.append(ct)
+	if is_instance_valid(_spin_total_label):
+		var target := orb_chip_box.global_position
+		var fly := create_tween()
+		fly.set_parallel(true)
+		fly.tween_property(_spin_total_label, "global_position", target, dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		fly.tween_property(_spin_total_label, "modulate:a", 0.0, dur)
+		fly.chain().tween_callback(func() -> void:
+			if is_instance_valid(_spin_total_label):
+				_spin_total_label.visible = false
+		)
+		_reveal_tweens.append(fly)
+
+# Phase ordering: anchor = max(cells) (pair lands on its later cell), tiebreak min(cells).
+func _phase2_before(a: Dictionary, b: Dictionary) -> bool:
+	var amax := _anchor_cell(a)
+	var bmax := _anchor_cell(b)
+	if amax != bmax:
+		return amax < bmax
+	return _min_cell(a) < _min_cell(b)
+
+# Anchor cell of an event = the max (latest reading-order) index in its cells.
 func _anchor_cell(ev: Dictionary) -> int:
-	var cells: Array = ev.get("cells", [int(ev["cell"])])
 	var m := int(ev["cell"])
-	for c in cells:
+	for c in ev.get("cells", [int(ev["cell"])]):
+		m = max(m, int(c))
+	return m
+
+func _min_cell(ev: Dictionary) -> int:
+	var m := int(ev["cell"])
+	for c in ev.get("cells", [int(ev["cell"])]):
 		m = min(m, int(c))
 	return m
+
+# Reward-orb trigger (reroll/removal): pop "+N" beside the matching HUD chip instead
+# of on the symbol — symbols only ever show point deltas.
+func _flash_reward(ev: Dictionary) -> void:
+	var kind := String(ev.get("reward_kind", ""))
+	var box: Control = removal_chip_box if kind == "removal_orb" else reroll_chip_box
+	_flash_chip(box, "+%d" % int(ev.get("reward_amount", 1)))
+
+func _flash_chip(box: Control, txt: String) -> void:
+	var f := Label.new()
+	f.text = txt
+	f.theme_type_variation = &"CurrencyLabel"
+	f.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	f.z_index = 30
+	add_child(f)
+	f.set_as_top_level(true)
+	f.global_position = box.global_position + Vector2(box.size.x * 0.5 - 8.0, -6.0)
+	var linger := REVEAL_FLOAT_LINGER / maxf(anim_speed, 0.001)
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(f, "global_position:y", f.global_position.y - 22.0, linger)
+	tw.tween_property(f, "modulate:a", 0.0, linger).set_delay(linger * 0.4)
+	tw.finished.connect(func() -> void:
+		if is_instance_valid(f):
+			f.queue_free()
+	)
+	_reveal_tweens.append(tw)
 
 func _spawn_float(i: int, v: int) -> void:
 	_spawn_text(i, "+%d" % v)
@@ -437,14 +689,16 @@ func _spawn_text(i: int, txt: String) -> void:
 	f.z_index = 20
 	cell.add_child(f)
 	f.position = cell.size * 0.5 - Vector2(10, 12)
+	var linger := REVEAL_FLOAT_LINGER / maxf(anim_speed, 0.001)
 	var tw := create_tween()
 	tw.set_parallel(true)
-	tw.tween_property(f, "position:y", f.position.y - 26.0, REVEAL_FLOAT_LINGER)
-	tw.tween_property(f, "modulate:a", 0.0, REVEAL_FLOAT_LINGER).set_delay(REVEAL_FLOAT_LINGER * 0.45)
+	tw.tween_property(f, "position:y", f.position.y - 26.0, linger)
+	tw.tween_property(f, "modulate:a", 0.0, linger).set_delay(linger * 0.45)
 	tw.finished.connect(func() -> void:
 		if is_instance_valid(f):
 			f.queue_free()
 	)
+	_reveal_tweens.append(tw)
 
 # Vertical hop with squash-and-stretch. Animates the cell sprite's own offset/
 # scale (not its GridContainer slot) so the container doesn't fight the motion.
@@ -452,17 +706,33 @@ func _bounce_cell(i: int) -> void:
 	var cell: TextureRect = _cells[i]
 	cell.pivot_offset = cell.size * 0.5
 	var base_y := cell.position.y
-	# Position: rise (sine out), then fall + overshoot settle (back out).
+	if not _cell_base_y.has(i):
+		_cell_base_y[i] = base_y
+	var up_t := BOUNCE_HOP_DUR * 0.42 / anim_speed
+	var down_t := BOUNCE_HOP_DUR * 0.58 / anim_speed
 	var pt := create_tween()
-	pt.tween_property(cell, "position:y", base_y - BOUNCE_HOP, BOUNCE_DUR * 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	pt.tween_property(cell, "position:y", base_y, BOUNCE_DUR * 0.68).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	# Scale: stretch tall on the way up, squash wide on landing, recover.
 	var st := create_tween()
-	st.tween_property(cell, "scale", Vector2(0.92, 1.12), BOUNCE_DUR * 0.32).set_ease(Tween.EASE_OUT)
-	st.tween_property(cell, "scale", Vector2(1.12, 0.9), BOUNCE_DUR * 0.30)
-	st.tween_property(cell, "scale", Vector2.ONE, BOUNCE_DUR * 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_reveal_tweens.append(pt)
+	_reveal_tweens.append(st)
+	# A settling bounce: BOUNCE_COUNT quick hops with decaying amplitude. Position
+	# and scale run as parallel chained tweens; squash-and-stretch scales with each
+	# hop's amplitude so the motion eases out as it settles.
+	var amp := BOUNCE_HOP
+	for h in BOUNCE_COUNT:
+		var s := amp / BOUNCE_HOP                 # 1.0 -> smaller, scales the squash/stretch
+		pt.tween_property(cell, "position:y", base_y - amp, up_t).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		pt.tween_property(cell, "position:y", base_y, down_t).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		st.tween_property(cell, "scale", Vector2(1.0 - 0.08 * s, 1.0 + 0.12 * s), up_t).set_ease(Tween.EASE_OUT)
+		st.tween_property(cell, "scale", Vector2(1.0 + 0.12 * s, 1.0 - 0.10 * s), down_t)
+		amp *= BOUNCE_DECAY
+	st.tween_property(cell, "scale", Vector2.ONE, 0.07).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _reset_reveal() -> void:
+	for tw in _reveal_tweens:
+		if tw is Tween and tw.is_valid():
+			tw.kill()
+	_reveal_tweens.clear()
+	_cell_base_y.clear()
 	for cell in _cells:
 		cell.scale = Vector2.ONE
 		for child in cell.get_children():
