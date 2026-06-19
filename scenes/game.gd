@@ -77,7 +77,10 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var popup_discard: Button = $SymbolPopupLayer/Panel/PopupBox/DiscardButton
 @onready var popup_hint: Label = $SymbolPopupLayer/Panel/PopupBox/DiscardHint
 @onready var popup_close: Button = $SymbolPopupLayer/Panel/PopupBox/TopRow/CloseX
-@onready var message_label: Label = $MessageLabel
+@onready var win_layer: Control = $WinLayer
+@onready var loss_layer: Control = $LossLayer
+@onready var new_run_win: Button = $WinLayer/Panel/WinBox/NewRunWin
+@onready var new_run_loss: Button = $LossLayer/Panel/LossBox/NewRunLoss
 @onready var log_lines: VBoxContainer = $Layout/SpinLog/LogScroll/LogLines
 
 # --- Score-reveal timing (two macro-phases: choreography, then tally) ---
@@ -137,6 +140,8 @@ func _ready() -> void:
 	settings_close.pressed.connect(_on_settings_close)
 	popup_close.pressed.connect(_close_symbol_popup)
 	popup_discard.pressed.connect(_on_popup_discard)
+	new_run_win.pressed.connect(_on_new_run)
+	new_run_loss.pressed.connect(_on_new_run)
 	$SymbolPopupLayer/Backdrop.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and ev.pressed:
 			_close_symbol_popup())
@@ -276,13 +281,22 @@ func _start_run() -> void:
 	grid = MidsummerEngine.roll_grid(pool)
 	_render_grid()
 	_update_hud()
-	message_label.hide()
-	draft_layer.hide()
-	bag_layer.hide()
-	spin_button.disabled = false
-	bag_button.disabled = false
+	# Clear all transient reveal/UI state so a restart matches a fresh boot exactly.
+	_reset_reveal()                                  # tweens, cell floats, flash labels, log
 	_revealing = false
 	_spinning = false
+	_skip = false
+	_popup_uid = ""
+	if is_instance_valid(_spin_total_label):
+		_spin_total_label.visible = false
+	draft_layer.hide()
+	bag_layer.hide()
+	settings_layer.hide()
+	symbol_popup_layer.hide()
+	win_layer.hide()
+	loss_layer.hide()
+	spin_button.disabled = false
+	bag_button.disabled = false
 	for line in log_lines.get_children():
 		line.queue_free()
 	var hint := Label.new()
@@ -866,18 +880,20 @@ func _win() -> void:
 	bag_button.disabled = true
 	draft_layer.hide()
 	bag_layer.hide()
-	message_label.text = "Crowned of Midsummer. The solstice fire is lit."
-	message_label.show()
+	win_layer.show()
 	_update_hud()
 
-func _lose(cost: int) -> void:
+func _lose(_cost: int) -> void:
 	running = false
 	spin_button.disabled = true
 	bag_button.disabled = true
 	draft_layer.hide()
 	bag_layer.hide()
-	message_label.text = "The fire gutters — needed %d orbs, had %d.\nThe forest reclaims you." % [cost, orbs]
-	message_label.show()
+	loss_layer.show()
+
+# New Run: fully reset to initial conditions and start fresh.
+func _on_new_run() -> void:
+	_start_run()
 
 # --- draft ---------------------------------------------------------------
 
