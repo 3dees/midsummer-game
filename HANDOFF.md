@@ -1,16 +1,16 @@
 # Midsummer Game — session handoff
 
-_Last updated: 2026-06-16. Untracked scratch file — delete or commit as you like._
+_Last updated: 2026-06-16._
 
 ## What this repo is
 Godot 4.6 (GDScript) port of **Midsummer Slots**, a roguelite slot game.
 Pure scoring logic ported from the TypeScript original. GitHub: `3dees/midsummer-game` (private).
 
-- **Reference source** (TypeScript original): sibling repo `midsummer-orb-spin` (on this machine: `C:\Users\vsjam\midsummer-orb-spin`)
-  — read `src/routes/play.tsx` (game-loop reducer) and `src/lib/midsummer/{engine,symbols}.ts`
-  when you need original behavior. Reference only.
-- **Godot binary**: install anywhere; update `$GODOT` below. On this machine:
-  `C:\Users\vsjam\Godot_v4.6.3-stable_win64.exe` (use `..._console.exe` for headless stdout).
+- **Reference source** (TypeScript original): clone the sibling repo `3dees/midsummer-orb-spin`
+  (private) alongside this repo. Read `src/routes/play.tsx` (game-loop reducer) and
+  `src/lib/midsummer/{engine,symbols}.ts` when you need original behavior. Reference only.
+- **Godot binary**: install Godot 4.6.3 (the console variant — `..._console.exe` on Windows —
+  is required for headless stdout). Point `$GODOT` (see below) at your install.
 
 ## State: everything merged to `main`
 PRs #1 (symbol registry + engine idiom fixes), #2 (sprite assets), #3 (playable scene)
@@ -81,7 +81,7 @@ Do not wire UI/game logic expecting any of these to execute:
 `consumeOnTithe` · `copyAdjacent` · `treatAsAdjacent` · `transformCommon` ·
 `titheReduction` · `exactTitheBonus` · `stealAdjacent` · `passive` · `note`
 
-- `DIFFICULTY = 3.2` in `engine.gd` is the single tithe-economy knob (tithe 1 cost = 25×3.2 = 80).
+- `DIFFICULTY = 1.5` in `engine.gd` is the single tithe-economy knob (tithe 1 cost = round(25×1.5) = 38).
   Changing it rescales all 12 tithe costs; re-tune by playtest. Does not affect scoring or the golden tests.
 - GDScript 4.6 gotcha: `:=` inferring from a Variant (Dictionary subscript, `and`/`or`, `min()`)
   is a hard error — use explicit types or `int()`/`str()`/`mini()`. The engine port hit this 11×.
