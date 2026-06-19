@@ -118,6 +118,12 @@ layout_mode = 2
 theme_type_variation = &"CurrencyLabel"
 text = "0"
 
+[node name="SpeedButton" type="Button" parent="Layout/HudPanel/HudBox/HudTop"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"SecondaryButton"
+text = "Anim: 1x"
+
 [node name="MuteButton" type="Button" parent="Layout/HudPanel/HudBox/HudTop"]
 layout_mode = 2
 size_flags_vertical = 4

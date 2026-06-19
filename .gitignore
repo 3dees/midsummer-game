@@ -2,3 +2,5 @@
 .godot/
 /android/
 .llm-chat-history/
+.vf4/
+.vframes/
