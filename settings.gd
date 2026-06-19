@@ -13,6 +13,8 @@ var music_enabled := true
 var music_volume := 0.7          # 0.0 - 1.0
 var sfx_enabled := true          # stub for future SFX
 var vibration_enabled := true
+var intro_enabled := true        # show the opening backstory at run start
+var intro_seen := false          # set true once the intro has played (informational)
 
 signal changed                   # emitted on any change so UI can refresh
 
@@ -55,6 +57,14 @@ func set_vibration_enabled(on: bool) -> void:
 	vibration_enabled = on
 	_changed()
 
+func set_intro_enabled(on: bool) -> void:
+	intro_enabled = on
+	_changed()
+
+func set_intro_seen(seen: bool) -> void:
+	intro_seen = seen
+	_changed()
+
 func _changed() -> void:
 	save_settings()
 	changed.emit()
@@ -88,6 +98,8 @@ func load_settings() -> void:
 	music_volume = clampf(float(cfg.get_value(SEC, "music_volume", music_volume)), 0.0, 1.0)
 	sfx_enabled = bool(cfg.get_value(SEC, "sfx_enabled", sfx_enabled))
 	vibration_enabled = bool(cfg.get_value(SEC, "vibration_enabled", vibration_enabled))
+	intro_enabled = bool(cfg.get_value(SEC, "intro_enabled", intro_enabled))
+	intro_seen = bool(cfg.get_value(SEC, "intro_seen", intro_seen))
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
@@ -96,4 +108,6 @@ func save_settings() -> void:
 	cfg.set_value(SEC, "music_volume", music_volume)
 	cfg.set_value(SEC, "sfx_enabled", sfx_enabled)
 	cfg.set_value(SEC, "vibration_enabled", vibration_enabled)
+	cfg.set_value(SEC, "intro_enabled", intro_enabled)
+	cfg.set_value(SEC, "intro_seen", intro_seen)
 	cfg.save(PATH)
