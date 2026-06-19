@@ -40,8 +40,19 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var orb_chip_box: HBoxContainer = $Layout/HudPanel/HudBox/HudTop/ChipsRow/OrbChipBox
 @onready var reroll_chip_box: HBoxContainer = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RerollChipBox
 @onready var removal_chip_box: HBoxContainer = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RemovalChipBox
-@onready var mute_button: Button = $Layout/HudPanel/HudBox/HudTop/MuteButton
-@onready var speed_button: Button = $Layout/HudPanel/HudBox/HudTop/SpeedButton
+@onready var gear_button: Button = $Layout/HudPanel/HudBox/HudTop/GearButton
+@onready var settings_layer: Control = $SettingsLayer
+@onready var settings_close: Button = $SettingsLayer/Panel/SettingsBox/SettingsClose
+@onready var music_toggle: Button = $SettingsLayer/Panel/SettingsBox/MusicRow/MusicToggle
+@onready var music_slider: HSlider = $SettingsLayer/Panel/SettingsBox/MusicRow/MusicSlider
+@onready var sfx_toggle: Button = $SettingsLayer/Panel/SettingsBox/SfxToggle
+@onready var vibration_toggle: Button = $SettingsLayer/Panel/SettingsBox/VibrationToggle
+@onready var anim_buttons := {
+	"off": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimOff,
+	"slow": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimSlow,
+	"normal": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimNormal,
+	"fast": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimFast,
+}
 @onready var music: AudioStreamPlayer = $Music
 @onready var sub_line: Label = $Layout/HudPanel/HudBox/SubLine
 @onready var season_round: Label = $Layout/CabinetAspect/Cabinet/StatusBox/SeasonRound
@@ -61,6 +72,11 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var bag_tab_symbols: Button = $BagLayer/Panel/BagBox/TabRow/TabSymbols
 @onready var bag_removal_label: Label = $BagLayer/Panel/BagBox/RemovalBar/RemovalRow/RemovalLabel
 @onready var bag_helper: Label = $BagLayer/Panel/BagBox/HelperText
+@onready var symbol_popup_layer: Control = $SymbolPopupLayer
+@onready var popup_detail: VBoxContainer = $SymbolPopupLayer/Panel/PopupBox/DetailHolder
+@onready var popup_discard: Button = $SymbolPopupLayer/Panel/PopupBox/DiscardButton
+@onready var popup_hint: Label = $SymbolPopupLayer/Panel/PopupBox/DiscardHint
+@onready var popup_close: Button = $SymbolPopupLayer/Panel/PopupBox/TopRow/CloseX
 @onready var message_label: Label = $MessageLabel
 @onready var log_lines: VBoxContainer = $Layout/SpinLog/LogScroll/LogLines
 
@@ -84,8 +100,6 @@ var _spin_total_label: Label = null # transient "+this spin" counter (created la
 var _reveal_tweens: Array = []      # active reveal tweens, killed on skip/finalize
 var _cell_base_y := {}              # bounced cells' rest Y, to restore on skip
 
-# Animation speed: 1.0 normal, 2.0 fast, 0.0 = off (apply final scores instantly).
-@export var anim_speed := 1.0
 
 # --- Tier 5 slot-reel spin timing ---
 const SPIN_SPEED := 1800.0          # constant reel scroll speed, px/s (same for every column)
@@ -107,6 +121,8 @@ const RARITY_COLORS := {
 }
 
 var _cells: Array = []               # the 20 TextureRect grid cells
+var _popup_uid := ""                 # uid the bag detail popup would discard
+var _flash_labels: Array = []        # transient reward "+N" labels (top-level; freed on skip)
 
 func _ready() -> void:
 	_apply_grid_rect()
@@ -117,42 +133,93 @@ func _ready() -> void:
 	bag_button.pressed.connect(_on_bag_open)
 	draft_bag_button.pressed.connect(_on_bag_open)
 	bag_close.pressed.connect(_on_bag_close)
-	mute_button.pressed.connect(_on_toggle_music)
-	speed_button.pressed.connect(_on_cycle_speed)
-	_update_speed_button()
+	gear_button.pressed.connect(_on_settings_open)
+	settings_close.pressed.connect(_on_settings_close)
+	popup_close.pressed.connect(_close_symbol_popup)
+	popup_discard.pressed.connect(_on_popup_discard)
+	$SymbolPopupLayer/Backdrop.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			_close_symbol_popup())
+	$SettingsLayer/Backdrop.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			_on_settings_close())
+	for mode in anim_buttons:
+		(anim_buttons[mode] as Button).pressed.connect(_on_anim_mode.bind(mode))
+	music_toggle.pressed.connect(_on_toggle_music)
+	music_slider.value_changed.connect(_on_music_volume)
+	sfx_toggle.pressed.connect(_on_toggle_sfx)
+	vibration_toggle.pressed.connect(_on_toggle_vibration)
+	_refresh_settings_ui()
 	# mp3 streams don't carry a loop flag from import; set it so the theme loops.
 	if music.stream is AudioStreamMP3:
 		music.stream.loop = true
 	_start_run()
 
-# Tap anywhere during the spin/reveal to skip straight to the final committed state.
+# Tap/click anywhere (incl. over the Spin button), a touch, or Enter/Space during the
+# spin/reveal skips straight to the final committed state. The event is consumed so it
+# can't also land as a draft pick or trigger another spin.
 func _input(event: InputEvent) -> void:
 	if not (_spinning or _revealing) or _skip:
 		return
 	var pressed: bool = (event is InputEventMouseButton and event.pressed) \
-		or (event is InputEventScreenTouch and event.pressed)
+		or (event is InputEventScreenTouch and event.pressed) \
+		or (event is InputEventKey and event.pressed and not event.echo \
+			and (event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]))
 	if pressed:
 		_skip = true
+		get_viewport().set_input_as_handled()
 
-# Cycle animation speed: 1x -> 2x -> Off -> 1x. Scales all reveal/spin timings; Off
-# applies final scores instantly with no choreography or tally.
-func _on_cycle_speed() -> void:
-	if anim_speed == 1.0:
-		anim_speed = 2.0
-	elif anim_speed == 2.0:
-		anim_speed = 0.0
-	else:
-		anim_speed = 1.0
-	_update_speed_button()
+# Per-frame timing divisor derived from the persistent animation setting. Reveal/spin
+# code keeps its historical `/ _aspeed()` form: normal 1.0, slow 0.667 (longer hops),
+# fast 2.0 (shorter). The "off" case is handled separately via Settings.animations_on().
+func _aspeed() -> float:
+	return 1.0 / Settings.anim_scale()
 
-func _update_speed_button() -> void:
-	speed_button.text = "Anim: Off" if anim_speed <= 0.0 else "Anim: %dx" % int(anim_speed)
+# --- settings panel ------------------------------------------------------
+
+func _on_settings_open() -> void:
+	_refresh_settings_ui()
+	settings_layer.visible = true
+
+func _on_settings_close() -> void:
+	settings_layer.visible = false
+
+func _on_anim_mode(mode: String) -> void:
+	Settings.set_animation_mode(mode)
+	_refresh_settings_ui()
 
 func _on_toggle_music() -> void:
-	var bus := AudioServer.get_bus_index("Music")
-	var muted := not AudioServer.is_bus_mute(bus)
-	AudioServer.set_bus_mute(bus, muted)
-	mute_button.text = "Music: Off" if muted else "Music: On"
+	Settings.set_music_enabled(not Settings.music_enabled)
+	_refresh_settings_ui()
+
+func _on_music_volume(v: float) -> void:
+	Settings.set_music_volume(v)
+	# don't re-sync the slider mid-drag; just keep the on/off label honest
+	music_toggle.text = "Music: %s" % ("On" if Settings.music_enabled else "Off")
+
+func _on_toggle_sfx() -> void:
+	Settings.set_sfx_enabled(not Settings.sfx_enabled)
+	_refresh_settings_ui()
+
+func _on_toggle_vibration() -> void:
+	Settings.set_vibration_enabled(not Settings.vibration_enabled)
+	_refresh_settings_ui()
+
+# Reflect persisted settings onto the panel controls.
+func _refresh_settings_ui() -> void:
+	for mode in anim_buttons:
+		var btn: Button = anim_buttons[mode]
+		# Active mode = primary button; others = SecondaryButton variation.
+		btn.theme_type_variation = &"" if Settings.animation_mode == mode else &"SecondaryButton"
+	music_toggle.text = "Music: %s" % ("On" if Settings.music_enabled else "Off")
+	music_toggle.button_pressed = Settings.music_enabled
+	if not music_slider.has_focus():
+		music_slider.value = Settings.music_volume
+	music_slider.editable = Settings.music_enabled
+	sfx_toggle.text = "Sound: %s" % ("On" if Settings.sfx_enabled else "Off")
+	sfx_toggle.button_pressed = Settings.sfx_enabled
+	vibration_toggle.text = "Vibration: %s" % ("On" if Settings.vibration_enabled else "Off")
+	vibration_toggle.button_pressed = Settings.vibration_enabled
 
 # Place the grid container over the cabinet frame's window opening, as fractions
 # of the (aspect-locked) frame rect. Offsets stay 0 so it scales with the frame.
@@ -284,7 +351,7 @@ func _play_spin(final_grid: Array) -> void:
 	for cell in _cells:
 		cell_rects.append((cell as TextureRect).get_global_rect())
 	var ch: float = cell_rects[COLS].position.y - cell_rects[0].position.y
-	if ch <= 0.0 or anim_speed <= 0.0 or _skip:  # no layout / speed off / skipped — apply instantly
+	if ch <= 0.0 or not Settings.animations_on() or _skip:  # no layout / off / skipped — apply instantly
 		_render_grid()
 		_spinning = false
 		return
@@ -344,12 +411,12 @@ func _play_spin(final_grid: Array) -> void:
 		strip.position.y = 0.0                   # start with fillers in view
 
 		# Constant-speed linear scroll for the bulk, then a smooth cubic ease-out tail that
-		# glides the reel onto the (centered) finals — no overshoot, no snap. anim_speed
-		# scales the whole spin (fast = shorter); guarded > 0 above.
+		# glides the reel onto the (centered) finals — no overshoot, no snap. _aspeed()
+		# scales the whole spin (fast = shorter); animations-off handled above.
 		var rest: float = -n_filler * ch
 		var decel_dist: float = ch * SPIN_DECEL_CELLS
-		var lin_dur: float = maxf(0.0, n_filler * ch - decel_dist) / SPIN_SPEED / anim_speed
-		var decel_dur: float = SPIN_DECEL / anim_speed
+		var lin_dur: float = maxf(0.0, n_filler * ch - decel_dist) / SPIN_SPEED / _aspeed()
+		var decel_dur: float = SPIN_DECEL / _aspeed()
 		var tw := create_tween()
 		tw.tween_property(strip, "position:y", rest + decel_dist, lin_dur).set_trans(Tween.TRANS_LINEAR)
 		tw.tween_property(strip, "position:y", rest, decel_dur).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -427,7 +494,7 @@ func _build_spin_textures() -> Array:
 #   PHASE 1 — Choreography: bounces only, no numbers, score frozen.
 #   PHASE 2 — Tally: a transient "+this spin" counter climbs as cells pay in
 #             (no bounces), then banks into the persistent Light total.
-# Tap-to-skip / anim_speed=0 jump straight to the final committed state.
+# Tap-to-skip / animations-off jump straight to the final committed state.
 func _play_reveal(score: Dictionary) -> void:
 	_revealing = true
 	_reset_reveal()
@@ -454,7 +521,7 @@ func _play_reveal(score: Dictionary) -> void:
 	orb_chip.text = "%d" % orbs                # score frozen through Phases 1-2
 
 	# Off / already-skipped: apply the final state instantly.
-	if anim_speed <= 0.0 or _skip:
+	if not Settings.animations_on() or _skip:
 		_finalize_reveal(score)
 		_revealing = false
 		return
@@ -546,12 +613,12 @@ func _play_reveal(score: Dictionary) -> void:
 
 # --- reveal helpers ------------------------------------------------------
 
-# Scaled, skippable wait. anim_speed scales every Phase 1/2 timing; a pending skip
-# (or speed 0) returns immediately so the loops blast through to the finalize.
+# Scaled, skippable wait. _aspeed() scales every Phase 1/2 timing; a pending skip
+# (or animations-off) returns immediately so the loops blast through to the finalize.
 func _sleep(sec: float) -> void:
-	if _skip or anim_speed <= 0.0:
+	if _skip or not Settings.animations_on():
 		return
-	await get_tree().create_timer(sec / anim_speed).timeout
+	await get_tree().create_timer(sec / _aspeed()).timeout
 
 # Jump to the final committed visual state: drop animations, fill the log, hide the
 # transient counter, and set the Light chip to its post-bank value.
@@ -568,6 +635,10 @@ func _finalize_reveal(score: Dictionary) -> void:
 	for i in _cell_base_y:                      # restore any cell frozen mid-hop
 		_cells[i].position.y = _cell_base_y[i]
 	_cell_base_y.clear()
+	for f in _flash_labels:                      # killed tweens never fire their free callback
+		if is_instance_valid(f):
+			f.queue_free()
+	_flash_labels.clear()
 	_fill_log(score)
 	if is_instance_valid(_spin_total_label):
 		_spin_total_label.visible = false
@@ -612,7 +683,7 @@ func _set_spin_total(n: int) -> void:
 # Count the Light chip up by the spin amount while the transient counter flies into
 # the chip and fades.
 func _bank_spin_total(spin_amount: int, start_orbs: int) -> void:
-	var dur := BANK_DUR / maxf(anim_speed, 0.001)
+	var dur := BANK_DUR / maxf(_aspeed(), 0.001)
 	var ct := create_tween()
 	ct.tween_method(func(v: float) -> void: orb_chip.text = "%d" % int(round(v)),
 		float(start_orbs), float(start_orbs + spin_amount), dur)
@@ -666,12 +737,14 @@ func _flash_chip(box: Control, txt: String) -> void:
 	add_child(f)
 	f.set_as_top_level(true)
 	f.global_position = box.global_position + Vector2(box.size.x * 0.5 - 8.0, -6.0)
-	var linger := REVEAL_FLOAT_LINGER / maxf(anim_speed, 0.001)
+	_flash_labels.append(f)
+	var linger := REVEAL_FLOAT_LINGER / maxf(_aspeed(), 0.001)
 	var tw := create_tween()
 	tw.set_parallel(true)
 	tw.tween_property(f, "global_position:y", f.global_position.y - 22.0, linger)
 	tw.tween_property(f, "modulate:a", 0.0, linger).set_delay(linger * 0.4)
 	tw.finished.connect(func() -> void:
+		_flash_labels.erase(f)
 		if is_instance_valid(f):
 			f.queue_free()
 	)
@@ -689,7 +762,7 @@ func _spawn_text(i: int, txt: String) -> void:
 	f.z_index = 20
 	cell.add_child(f)
 	f.position = cell.size * 0.5 - Vector2(10, 12)
-	var linger := REVEAL_FLOAT_LINGER / maxf(anim_speed, 0.001)
+	var linger := REVEAL_FLOAT_LINGER / maxf(_aspeed(), 0.001)
 	var tw := create_tween()
 	tw.set_parallel(true)
 	tw.tween_property(f, "position:y", f.position.y - 26.0, linger)
@@ -708,8 +781,8 @@ func _bounce_cell(i: int) -> void:
 	var base_y := cell.position.y
 	if not _cell_base_y.has(i):
 		_cell_base_y[i] = base_y
-	var up_t := BOUNCE_HOP_DUR * 0.42 / anim_speed
-	var down_t := BOUNCE_HOP_DUR * 0.58 / anim_speed
+	var up_t := BOUNCE_HOP_DUR * 0.42 / _aspeed()
+	var down_t := BOUNCE_HOP_DUR * 0.58 / _aspeed()
 	var pt := create_tween()
 	var st := create_tween()
 	_reveal_tweens.append(pt)
@@ -733,6 +806,10 @@ func _reset_reveal() -> void:
 			tw.kill()
 	_reveal_tweens.clear()
 	_cell_base_y.clear()
+	for f in _flash_labels:                          # leftover reward "+N" from a prior spin
+		if is_instance_valid(f):
+			f.queue_free()
+	_flash_labels.clear()
 	for cell in _cells:
 		cell.scale = Vector2.ONE
 		for child in cell.get_children():
@@ -774,6 +851,7 @@ func _resolve_tithe() -> void:
 		removal_orbs = mini(removal_orbs + 1, 3)      # free removal orb per tithe paid (cap 3)
 		spin_in_cycle = 0
 		tithe_round += 1
+		Settings.vibrate(30)                          # short pulse on a tithe pass
 		if tithe_round >= 12:
 			_win()
 		else:
@@ -783,6 +861,7 @@ func _resolve_tithe() -> void:
 
 func _win() -> void:
 	running = false
+	Settings.vibrate(120)                            # longer pulse on a win
 	spin_button.disabled = true
 	bag_button.disabled = true
 	draft_layer.hide()
@@ -814,8 +893,6 @@ func _open_draft() -> void:
 	draft_layer.show()
 
 func _make_card(id: String) -> PanelContainer:
-	var sym: Dictionary = Symbols.SYMBOLS[id]
-
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(200, 0)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -824,7 +901,15 @@ func _make_card(id: String) -> PanelContainer:
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			_on_pick(id)
 	)
+	panel.add_child(_make_detail_body(id))
+	return panel
 
+
+# Symbol detail body: sprite, name, rarity, base value, description, group pills.
+# Shared by draft cards and the bag detail popup. All children ignore mouse so the
+# parent (card panel / popup) owns the gesture.
+func _make_detail_body(id: String) -> VBoxContainer:
+	var sym: Dictionary = Symbols.SYMBOLS[id]
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 6)
 
@@ -884,8 +969,7 @@ func _make_card(id: String) -> PanelContainer:
 	if pills != null:
 		vbox.add_child(pills)
 
-	panel.add_child(vbox)
-	return panel
+	return vbox
 
 
 # Synergy-group tag pills (small rounded). Returns null when the symbol has no groups.
@@ -1047,8 +1131,7 @@ func _build_bag() -> void:
 		c.queue_free()
 	bag_tab_symbols.text = "SYMBOLS (%d)" % pool.size()
 	bag_removal_label.text = "%d Removal Orbs" % removal_orbs
-	bag_helper.text = ("Tap a symbol to discard it (costs 1 Removal Orb)." if removal_orbs > 0
-		else "Earn Removal Orbs from spins to discard symbols from your bag.")
+	bag_helper.text = "Tap a symbol for details. Discard from there (costs 1 Removal Orb)."
 
 	# Group identical symbols (shared id, unique uid) into one ×N tile. Removal
 	# spends one uid of that id; the floor check stays on total pool size.
@@ -1063,21 +1146,22 @@ func _build_bag() -> void:
 			order.append(id)
 		counts[id] += 1
 
-	var can_remove := removal_orbs > 0 and pool.size() > 3
 	for id in order:
-		bag_grid.add_child(_make_bag_tile(id, int(counts[id]), String(first_uid[id]), can_remove))
+		bag_grid.add_child(_make_bag_tile(id, int(counts[id]), String(first_uid[id])))
 
 
-func _make_bag_tile(id: String, count: int, uid: String, can_remove: bool) -> PanelContainer:
+func _make_bag_tile(id: String, count: int, uid: String) -> PanelContainer:
 	var sym: Dictionary = Symbols.SYMBOLS[id]
 	var tile := PanelContainer.new()
 	tile.custom_minimum_size = Vector2(104, 116)
-	if can_remove:
-		tile.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		tile.gui_input.connect(func(ev: InputEvent) -> void:
-			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-				_on_remove_tile(uid)
-		)
+	# Tap = open the detail popup (never destructive). Desktop hover shows the same
+	# description as a lightweight built-in tooltip.
+	tile.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	tile.tooltip_text = _card_desc(sym)
+	tile.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_open_symbol_popup(id, uid)
+	)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 2)
@@ -1121,6 +1205,34 @@ func _on_remove_tile(uid: String) -> void:
 			break
 	_update_hud()
 	_build_bag()                                     # refresh (and re-evaluate disabled state)
+
+# --- bag symbol detail popup ---------------------------------------------
+
+# Tap a bag tile to inspect it. The detail body reuses the draft-card rendering;
+# discard happens only via the Discard button below (a plain tap is non-destructive).
+func _open_symbol_popup(id: String, uid: String) -> void:
+	_popup_uid = uid
+	for c in popup_detail.get_children():
+		c.queue_free()
+	popup_detail.add_child(_make_detail_body(id))
+	# Discard availability mirrors _on_remove_tile's guards (orbs first, then floor).
+	if removal_orbs <= 0:
+		popup_discard.disabled = true
+		popup_hint.text = "No Removal Orbs"
+	elif pool.size() <= 3:
+		popup_discard.disabled = true
+		popup_hint.text = "Can't go below 3"
+	else:
+		popup_discard.disabled = false
+		popup_hint.text = "Spend 1 Removal Orb to discard."
+	symbol_popup_layer.show()
+
+func _close_symbol_popup() -> void:
+	symbol_popup_layer.hide()
+
+func _on_popup_discard() -> void:
+	_on_remove_tile(_popup_uid)                      # spends orb + rebuilds bag (guards re-checked)
+	_close_symbol_popup()
 
 func _clear_cards() -> void:
 	for c in draft_cards.get_children():

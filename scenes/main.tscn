@@ -118,17 +118,11 @@ layout_mode = 2
 theme_type_variation = &"CurrencyLabel"
 text = "0"
 
-[node name="SpeedButton" type="Button" parent="Layout/HudPanel/HudBox/HudTop"]
+[node name="GearButton" type="Button" parent="Layout/HudPanel/HudBox/HudTop"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"SecondaryButton"
-text = "Anim: 1x"
-
-[node name="MuteButton" type="Button" parent="Layout/HudPanel/HudBox/HudTop"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_type_variation = &"SecondaryButton"
-text = "Music: On"
+text = "⚙"
 
 [node name="SubLine" type="Label" parent="Layout/HudPanel/HudBox"]
 layout_mode = 2
@@ -419,3 +413,170 @@ theme_type_variation = &"TitleLabel"
 text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="SettingsLayer" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="SettingsLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="SettingsLayer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SettingsBox" type="VBoxContainer" parent="SettingsLayer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SettingsTitle" type="Label" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="AnimLabel" type="Label" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Animation"
+
+[node name="AnimRow" type="HBoxContainer" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AnimOff" type="Button" parent="SettingsLayer/Panel/SettingsBox/AnimRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Off"
+
+[node name="AnimSlow" type="Button" parent="SettingsLayer/Panel/SettingsBox/AnimRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Slow"
+
+[node name="AnimNormal" type="Button" parent="SettingsLayer/Panel/SettingsBox/AnimRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Normal"
+
+[node name="AnimFast" type="Button" parent="SettingsLayer/Panel/SettingsBox/AnimRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Fast"
+
+[node name="MusicLabel" type="Label" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Music"
+
+[node name="MusicRow" type="HBoxContainer" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MusicToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox/MusicRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+toggle_mode = true
+text = "Music: On"
+
+[node name="MusicSlider" type="HSlider" parent="SettingsLayer/Panel/SettingsBox/MusicRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.7
+
+[node name="SfxToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+toggle_mode = true
+text = "Sound: On"
+
+[node name="VibrationToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+toggle_mode = true
+text = "Vibration: On"
+
+[node name="SettingsClose" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+text = "Close"
+
+[node name="SymbolPopupLayer" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="SymbolPopupLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="PanelContainer" parent="SymbolPopupLayer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PopupBox" type="VBoxContainer" parent="SymbolPopupLayer/Panel"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TopRow" type="HBoxContainer" parent="SymbolPopupLayer/Panel/PopupBox"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="SymbolPopupLayer/Panel/PopupBox/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseX" type="Button" parent="SymbolPopupLayer/Panel/PopupBox/TopRow"]
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
+text = "✕"
+
+[node name="DetailHolder" type="VBoxContainer" parent="SymbolPopupLayer/Panel/PopupBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DiscardButton" type="Button" parent="SymbolPopupLayer/Panel/PopupBox"]
+layout_mode = 2
+text = "Discard (✕1)"
+
+[node name="DiscardHint" type="Label" parent="SymbolPopupLayer/Panel/PopupBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+text = ""
