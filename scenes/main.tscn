@@ -504,6 +504,11 @@ layout_mode = 2
 toggle_mode = true
 text = "Vibration: On"
 
+[node name="StoryToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+toggle_mode = true
+text = "Opening story: On"
+
 [node name="SettingsClose" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
 layout_mode = 2
 text = "Close"
@@ -672,3 +677,76 @@ autowrap_mode = 2
 [node name="NewRunLoss" type="Button" parent="LossLayer/Panel/LossBox"]
 layout_mode = 2
 text = "New Run"
+
+[node name="StoryLayer" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Backdrop" type="ColorRect" parent="StoryLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.8)
+
+[node name="Panel" type="PanelContainer" parent="StoryLayer"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="StoryBox" type="VBoxContainer" parent="StoryLayer/Panel"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+mouse_filter = 2
+
+[node name="StoryText" type="Label" parent="StoryLayer/Panel/StoryBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+mouse_filter = 2
+
+[node name="DontShowRow" type="HBoxContainer" parent="StoryLayer/Panel/StoryBox"]
+visible = false
+layout_mode = 2
+alignment = 1
+mouse_filter = 2
+
+[node name="DontShowToggle" type="CheckButton" parent="StoryLayer/Panel/StoryBox/DontShowRow"]
+layout_mode = 2
+text = "Don't show this again"
+
+[node name="ButtonRow" type="HBoxContainer" parent="StoryLayer/Panel/StoryBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+mouse_filter = 2
+
+[node name="SkipButton" type="Button" parent="StoryLayer/Panel/StoryBox/ButtonRow"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
+text = "Skip"
+
+[node name="Spacer" type="Control" parent="StoryLayer/Panel/StoryBox/ButtonRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="ContinueButton" type="Button" parent="StoryLayer/Panel/StoryBox/ButtonRow"]
+layout_mode = 2
+text = "Continue"

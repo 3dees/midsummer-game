@@ -8,6 +8,7 @@ extends Control
 const COLS := 5
 const ROWS := 4
 const SPRITE_DIR := "res://assets/sprites/"
+const Story = preload("res://story.gd")   # narrative text holder
 
 # --- run state (mirrors the play.tsx GameState) ---
 var pool: Array = []                 # Array of tiles (MidsummerEngine.make_tile)
@@ -79,8 +80,17 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var popup_close: Button = $SymbolPopupLayer/Panel/PopupBox/TopRow/CloseX
 @onready var win_layer: Control = $WinLayer
 @onready var loss_layer: Control = $LossLayer
+@onready var win_sub: Label = $WinLayer/Panel/WinBox/WinSub
+@onready var loss_sub: Label = $LossLayer/Panel/LossBox/LossSub
 @onready var new_run_win: Button = $WinLayer/Panel/WinBox/NewRunWin
 @onready var new_run_loss: Button = $LossLayer/Panel/LossBox/NewRunLoss
+@onready var story_toggle: Button = $SettingsLayer/Panel/SettingsBox/StoryToggle
+@onready var story_layer: Control = $StoryLayer
+@onready var story_text: Label = $StoryLayer/Panel/StoryBox/StoryText
+@onready var story_dontshow_row: Control = $StoryLayer/Panel/StoryBox/DontShowRow
+@onready var story_dontshow: CheckButton = $StoryLayer/Panel/StoryBox/DontShowRow/DontShowToggle
+@onready var story_skip: Button = $StoryLayer/Panel/StoryBox/ButtonRow/SkipButton
+@onready var story_continue: Button = $StoryLayer/Panel/StoryBox/ButtonRow/ContinueButton
 @onready var log_lines: VBoxContainer = $Layout/SpinLog/LogScroll/LogLines
 
 # --- Score-reveal timing (two macro-phases: choreography, then tally) ---
@@ -126,6 +136,8 @@ const RARITY_COLORS := {
 var _cells: Array = []               # the 20 TextureRect grid cells
 var _popup_uid := ""                 # uid the bag detail popup would discard
 var _flash_labels: Array = []        # transient reward "+N" labels (top-level; freed on skip)
+var _intro_skip := false             # Skip pressed during the opening intro
+signal _story_advance                # fires when a story screen is advanced (Continue/tap/Enter)
 
 func _ready() -> void:
 	_apply_grid_rect()
@@ -142,6 +154,13 @@ func _ready() -> void:
 	popup_discard.pressed.connect(_on_popup_discard)
 	new_run_win.pressed.connect(_on_new_run)
 	new_run_loss.pressed.connect(_on_new_run)
+	story_continue.pressed.connect(_on_story_advance)
+	story_skip.pressed.connect(_on_story_skip)
+	story_dontshow.toggled.connect(_on_dontshow_toggled)
+	story_toggle.pressed.connect(_on_toggle_intro)
+	$StoryLayer/Backdrop.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			_on_story_advance())
 	$SymbolPopupLayer/Backdrop.gui_input.connect(func(ev: InputEvent) -> void:
 		if ev is InputEventMouseButton and ev.pressed:
 			_close_symbol_popup())
@@ -159,11 +178,21 @@ func _ready() -> void:
 	if music.stream is AudioStreamMP3:
 		music.stream.loop = true
 	_start_run()
+	await _begin_narrative()
 
 # Tap/click anywhere (incl. over the Spin button), a touch, or Enter/Space during the
 # spin/reveal skips straight to the final committed state. The event is consumed so it
 # can't also land as a draft pick or trigger another spin.
 func _input(event: InputEvent) -> void:
+	# Story screens own input while up. Handle Enter/Space here (keyboard only) and let
+	# mouse fall through to the GUI phase so Continue/Skip/Don't-show buttons still click;
+	# the backdrop's gui_input handles a tap anywhere else.
+	if story_layer.visible:
+		if event is InputEventKey and event.pressed and not event.echo \
+				and (event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]):
+			_on_story_advance()
+			get_viewport().set_input_as_handled()
+		return
 	if not (_spinning or _revealing) or _skip:
 		return
 	var pressed: bool = (event is InputEventMouseButton and event.pressed) \
@@ -225,6 +254,12 @@ func _refresh_settings_ui() -> void:
 	sfx_toggle.button_pressed = Settings.sfx_enabled
 	vibration_toggle.text = "Vibration: %s" % ("On" if Settings.vibration_enabled else "Off")
 	vibration_toggle.button_pressed = Settings.vibration_enabled
+	story_toggle.text = "Opening story: %s" % ("On" if Settings.intro_enabled else "Off")
+	story_toggle.button_pressed = Settings.intro_enabled
+
+func _on_toggle_intro() -> void:
+	Settings.set_intro_enabled(not Settings.intro_enabled)
+	_refresh_settings_ui()
 
 # Place the grid container over the cabinet frame's window opening, as fractions
 # of the (aspect-locked) frame rect. Offsets stay 0 so it scales with the frame.
@@ -295,6 +330,7 @@ func _start_run() -> void:
 	symbol_popup_layer.hide()
 	win_layer.hide()
 	loss_layer.hide()
+	story_layer.hide()
 	spin_button.disabled = false
 	bag_button.disabled = false
 	for line in log_lines.get_children():
@@ -336,7 +372,7 @@ func _on_spin() -> void:
 
 	# Tithe check: did this spin complete the cycle?
 	if spin_in_cycle >= int(schedule[tithe_round]["spins"]):
-		_resolve_tithe()
+		await _resolve_tithe()
 		if not running:
 			return
 	# Draft after every spin (uses the possibly-advanced tithe_round).
@@ -860,18 +896,25 @@ func _desc_for_event(ev: Dictionary) -> String:
 
 func _resolve_tithe() -> void:
 	var cost := int(schedule[tithe_round]["orbs"])
-	if orbs >= cost:
-		orbs -= cost                                 # keep the surplus (carry-over)
-		removal_orbs = mini(removal_orbs + 1, 3)      # free removal orb per tithe paid (cap 3)
-		spin_in_cycle = 0
-		tithe_round += 1
-		Settings.vibrate(30)                          # short pulse on a tithe pass
-		if tithe_round >= 12:
-			_win()
-		else:
-			_update_hud()
-	else:
+	if orbs < cost:
 		_lose(cost)
+		return
+	orbs -= cost                                     # keep the surplus (carry-over)
+	removal_orbs = mini(removal_orbs + 1, 3)          # free removal orb per tithe paid (cap 3)
+	var paid := tithe_round + 1                       # 1-based number of the tithe just paid
+	spin_in_cycle = 0
+	tithe_round += 1
+	Settings.vibrate(30)                              # short pulse on a tithe pass
+	if tithe_round >= 12:
+		_win()
+		return
+	_update_hud()
+	# Quick tithe line (1-11), then the next season beat if this tithe closed a season.
+	if Story.TITHE.has(paid):
+		await _play_story_screen(String(Story.TITHE[paid]["line"]), String(Story.TITHE[paid].get("note", "")))
+	var season := Story.season_after(paid)
+	if season != "":
+		await _play_story_screen(String(Story.SEASONS[season]))
 
 func _win() -> void:
 	running = false
@@ -880,6 +923,7 @@ func _win() -> void:
 	bag_button.disabled = true
 	draft_layer.hide()
 	bag_layer.hide()
+	win_sub.text = Story.WIN
 	win_layer.show()
 	_update_hud()
 
@@ -889,11 +933,62 @@ func _lose(_cost: int) -> void:
 	bag_button.disabled = true
 	draft_layer.hide()
 	bag_layer.hide()
+	loss_sub.text = Story.LOSS
 	loss_layer.show()
 
 # New Run: fully reset to initial conditions and start fresh.
 func _on_new_run() -> void:
 	_start_run()
+	await _begin_narrative()
+
+# --- narrative -----------------------------------------------------------
+
+# Run-start narrative: opening intro (if enabled), then the First Light season beat.
+func _begin_narrative() -> void:
+	if Settings.intro_enabled:
+		Settings.set_intro_seen(true)
+		await _play_intro()
+	await _play_story_screen(Story.SEASONS["first_light"])
+
+# Paced opening backstory: one beat per screen, with Skip (skips the rest this run).
+# The "Don't show this again" toggle appears only on the very first beat.
+func _play_intro() -> void:
+	_intro_skip = false
+	story_skip.show()
+	for i in Story.INTRO.size():
+		if _intro_skip:
+			break
+		story_dontshow_row.visible = (i == 0)        # toggle only on the first story modal
+		if i == 0:
+			story_dontshow.button_pressed = not Settings.intro_enabled
+		story_text.text = String(Story.INTRO[i])
+		story_layer.show()
+		await _story_advance
+	story_layer.hide()
+	story_skip.hide()
+	story_dontshow_row.hide()
+
+# Single story screen (season beat / quick tithe line). Tap / click / Enter / Continue
+# advances. The optional note line carries future per-tithe mechanical announcements.
+func _play_story_screen(text: String, note: String = "") -> void:
+	story_skip.hide()
+	story_dontshow_row.hide()
+	story_text.text = text if note == "" else text + "\n\n" + note
+	story_layer.show()
+	await _story_advance
+	story_layer.hide()
+
+func _on_story_advance() -> void:
+	_story_advance.emit()
+
+# Skip: end the opening intro now (skip all remaining opening beats). The First Light
+# beat and the per-tithe / per-season popups still play.
+func _on_story_skip() -> void:
+	_intro_skip = true
+	_story_advance.emit()                            # unblock the current beat's await
+
+func _on_dontshow_toggled(pressed: bool) -> void:
+	Settings.set_intro_enabled(not pressed)          # checked = don't show again
 
 # --- draft ---------------------------------------------------------------
 
