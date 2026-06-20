@@ -111,6 +111,8 @@ const DRAFT_PAUSE := 0.20           # beat after the tally banks before the draf
 var _revealing := false
 var _skip := false                  # tap-to-skip: jump to the final committed state
 var _skippable := true              # false on the tithe-completing spin (must watch the modal)
+const STORY_INPUT_LOCK := 0.5       # min time a story screen is shown before it accepts advance
+var _story_ready := false           # false during the input-lock so a spammed tap can't dismiss it
 var _spin_total_label: Label = null # transient "+this spin" counter (created lazily)
 var _reveal_tweens: Array = []      # active reveal tweens, killed on skip/finalize
 var _cell_base_y := {}              # bounced cells' rest Y, to restore on skip
@@ -1004,6 +1006,7 @@ func _play_intro() -> void:
 			story_dontshow.button_pressed = not Settings.intro_enabled
 		story_text.text = String(Story.INTRO[i])
 		story_layer.show()
+		await _arm_story()
 		await _story_advance
 	story_layer.hide()
 	story_skip.hide()
@@ -1016,10 +1019,20 @@ func _play_story_screen(text: String, note: String = "") -> void:
 	story_dontshow_row.hide()
 	story_text.text = text if note == "" else text + "\n\n" + note
 	story_layer.show()
+	await _arm_story()
 	await _story_advance
 	story_layer.hide()
 
+# Hold off advance input for a beat after a screen appears, so a spammed tap/click
+# (e.g. from skipping the spin) can't instantly dismiss it. Real-time, not anim-scaled.
+func _arm_story() -> void:
+	_story_ready = false
+	await get_tree().create_timer(STORY_INPUT_LOCK).timeout
+	_story_ready = true
+
 func _on_story_advance() -> void:
+	if not _story_ready:
+		return
 	Sfx.play("ui_click")
 	_story_advance.emit()
 
