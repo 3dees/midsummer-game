@@ -46,7 +46,8 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var settings_close: Button = $SettingsLayer/Panel/SettingsBox/SettingsClose
 @onready var music_toggle: Button = $SettingsLayer/Panel/SettingsBox/MusicRow/MusicToggle
 @onready var music_slider: HSlider = $SettingsLayer/Panel/SettingsBox/MusicRow/MusicSlider
-@onready var sfx_toggle: Button = $SettingsLayer/Panel/SettingsBox/SfxToggle
+@onready var sfx_toggle: Button = $SettingsLayer/Panel/SettingsBox/SfxRow/SfxToggle
+@onready var sfx_slider: HSlider = $SettingsLayer/Panel/SettingsBox/SfxRow/SfxSlider
 @onready var vibration_toggle: Button = $SettingsLayer/Panel/SettingsBox/VibrationToggle
 @onready var anim_buttons := {
 	"off": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimOff,
@@ -94,21 +95,22 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 @onready var log_lines: VBoxContainer = $Layout/SpinLog/LogScroll/LogLines
 
 # --- Score-reveal timing (two macro-phases: choreography, then tally) ---
-const REVEAL_FLOAT_LINGER := 0.78   # "+N" float rise + fade duration (~780ms)
-const CHOREO_GAP := 0.10            # Phase 1: gap between adjacency pair beats (100ms)
-const PHASE_BEAT := 0.25            # beat between Phase 1 (choreo) and Phase 2 (tally)
-const TALLY_BASE_CADENCE := 0.06    # Phase 2: base-value sweep cadence (60ms)
-const TALLY_SYN_CADENCE := 0.10     # Phase 2: synergy float cadence (100ms)
-const TALLY_GLOBAL_PAUSE := 0.18    # Phase 2: pause before the global apply
-const BANK_PAUSE := 0.30            # pause once the tally reaches the spin total
-const BANK_DUR := 0.45              # count-up / fly-into-Light bank animation
-const BOUNCE_COUNT := 3             # hops per synergy group (settling bounce)
+const REVEAL_FLOAT_LINGER := 0.60   # "+N" float rise + fade duration (~600ms)
+const CHOREO_GAP := 0.05            # Phase 1: gap between adjacency pair beats (50ms)
+const PHASE_BEAT := 0.15            # beat between Phase 1 (choreo) and Phase 2 (tally)
+const TALLY_BASE_CADENCE := 0.04    # Phase 2: base-value sweep cadence (40ms)
+const TALLY_SYN_CADENCE := 0.06     # Phase 2: synergy float cadence (60ms)
+const TALLY_GLOBAL_PAUSE := 0.10    # Phase 2: pause before the global apply
+const BANK_PAUSE := 0.18            # pause once the tally reaches the spin total
+const BANK_DUR := 0.30              # count-up / fly-into-Light bank animation
+const BOUNCE_COUNT := 2             # hops per synergy group (snappier settling bounce)
 const BOUNCE_HOP := 14.0            # first hop height (px); decays each hop
-const BOUNCE_DECAY := 0.62          # amplitude multiplier per hop (~14 -> 9 -> 5px)
-const BOUNCE_HOP_DUR := 0.15        # duration of one hop (~150ms); 3 hops ~= 450ms
-const DRAFT_PAUSE := 0.35           # beat after the tally banks before the draft opens
+const BOUNCE_DECAY := 0.62          # amplitude multiplier per hop
+const BOUNCE_HOP_DUR := 0.10        # duration of one hop (~100ms); 2 hops ~= 200ms
+const DRAFT_PAUSE := 0.20           # beat after the tally banks before the draft opens
 var _revealing := false
 var _skip := false                  # tap-to-skip: jump to the final committed state
+var _skippable := true              # false on the tithe-completing spin (must watch the modal)
 var _spin_total_label: Label = null # transient "+this spin" counter (created lazily)
 var _reveal_tweens: Array = []      # active reveal tweens, killed on skip/finalize
 var _cell_base_y := {}              # bounced cells' rest Y, to restore on skip
@@ -172,6 +174,7 @@ func _ready() -> void:
 	music_toggle.pressed.connect(_on_toggle_music)
 	music_slider.value_changed.connect(_on_music_volume)
 	sfx_toggle.pressed.connect(_on_toggle_sfx)
+	sfx_slider.value_changed.connect(_on_sfx_volume)
 	vibration_toggle.pressed.connect(_on_toggle_vibration)
 	_refresh_settings_ui()
 	# mp3 streams don't carry a loop flag from import; set it so the theme loops.
@@ -193,7 +196,7 @@ func _input(event: InputEvent) -> void:
 			_on_story_advance()
 			get_viewport().set_input_as_handled()
 		return
-	if not (_spinning or _revealing) or _skip:
+	if not (_spinning or _revealing) or _skip or not _skippable:
 		return
 	var pressed: bool = (event is InputEventMouseButton and event.pressed) \
 		or (event is InputEventScreenTouch and event.pressed) \
@@ -212,10 +215,12 @@ func _aspeed() -> float:
 # --- settings panel ------------------------------------------------------
 
 func _on_settings_open() -> void:
+	Sfx.play("ui_click")
 	_refresh_settings_ui()
 	settings_layer.visible = true
 
 func _on_settings_close() -> void:
+	Sfx.play("ui_click")
 	settings_layer.visible = false
 
 func _on_anim_mode(mode: String) -> void:
@@ -233,7 +238,12 @@ func _on_music_volume(v: float) -> void:
 
 func _on_toggle_sfx() -> void:
 	Settings.set_sfx_enabled(not Settings.sfx_enabled)
+	Sfx.play("ui_click")                             # audible confirmation when turning on
 	_refresh_settings_ui()
+
+func _on_sfx_volume(v: float) -> void:
+	Settings.set_sfx_volume(v)
+	sfx_toggle.text = "Sound: %s" % ("On" if Settings.sfx_enabled else "Off")
 
 func _on_toggle_vibration() -> void:
 	Settings.set_vibration_enabled(not Settings.vibration_enabled)
@@ -252,6 +262,9 @@ func _refresh_settings_ui() -> void:
 	music_slider.editable = Settings.music_enabled
 	sfx_toggle.text = "Sound: %s" % ("On" if Settings.sfx_enabled else "Off")
 	sfx_toggle.button_pressed = Settings.sfx_enabled
+	if not sfx_slider.has_focus():
+		sfx_slider.value = Settings.sfx_volume
+	sfx_slider.editable = Settings.sfx_enabled
 	vibration_toggle.text = "Vibration: %s" % ("On" if Settings.vibration_enabled else "Off")
 	vibration_toggle.button_pressed = Settings.vibration_enabled
 	story_toggle.text = "Opening story: %s" % ("On" if Settings.intro_enabled else "Off")
@@ -341,9 +354,16 @@ func _start_run() -> void:
 	log_lines.add_child(hint)
 
 func _on_spin() -> void:
-	if not running or _revealing or _spinning:
+	if not running:
 		return
+	if _spinning or _revealing:
+		if _skippable:
+			_skip = true                          # pressing Spin again fast-forwards the animation
+		return
+	Sfx.play("ui_click")
 	_skip = false
+	# The tithe-completing spin can't be skipped, so the player sees the tithe modal.
+	_skippable = spin_in_cycle + 1 < int(schedule[tithe_round]["spins"])
 	grid = MidsummerEngine.roll_grid(pool)
 	var ctx := {
 		"total_spins": total_spins,
@@ -353,7 +373,7 @@ func _on_spin() -> void:
 		"alternating_tick": alternating_tick,
 	}
 	var score := MidsummerEngine.score_grid(grid, ctx)
-	spin_button.disabled = true
+	# Leave the Spin button enabled during the spin/reveal so a second press skips it.
 	bag_button.disabled = true
 
 	# Tier 5: spin the reels and land them on the already-scored grid (no re-roll),
@@ -419,6 +439,8 @@ func _play_spin(final_grid: Array) -> void:
 	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grid_box.get_parent().add_child(layer)
 
+	Sfx.start_loop("reel_spin_loop")             # looping bed while the reels move
+
 	# Every reel moves at the same constant speed; later columns scroll farther (more
 	# filler) so they stop later. Stop time per column = base + c*stagger.
 	var max_dur := 0.0
@@ -480,6 +502,7 @@ func _play_spin(final_grid: Array) -> void:
 
 	await get_tree().create_timer(max_dur + 0.05).timeout
 
+	Sfx.stop_loop()                              # fade the reel bed as the columns settle
 	if is_instance_valid(layer):
 		layer.queue_free()
 	_render_grid()                               # guarantee exact final textures + visibility
@@ -607,6 +630,7 @@ func _play_reveal(score: Dictionary) -> void:
 	# ---------- PHASE 2 — Tally (numbers count up, no bounces) ----------
 	_show_spin_total()
 	var run := 0
+	var step := 1                                # ascending score_tick index (1..11), reset each tally
 	# Base sweep, reading order.
 	for i in _cells.size():
 		var tile = grid[i] if i < grid.size() else null
@@ -618,6 +642,8 @@ func _play_reveal(score: Dictionary) -> void:
 		run += base
 		_set_spin_total(run)
 		_spawn_float(i, base)
+		Sfx.play("score_tick_%02d" % step)           # one tick per cell-float; pitch baked in
+		step = mini(step + 1, 11)                    # advance, hold the top note on busy boards
 		await _sleep(TALLY_BASE_CADENCE)
 		if _skip: break
 	# Synergy bonuses (pairs + locals), reading order; multipliers float but don't add.
@@ -632,6 +658,8 @@ func _play_reveal(score: Dictionary) -> void:
 				_spawn_float(anchor, int(ev["orbs_delta"]))
 			elif ev.has("multiplier"):
 				_spawn_text(anchor, "×%s" % _fmt_num(float(ev["multiplier"])))
+			Sfx.play("score_tick_%02d" % step)
+			step = mini(step + 1, 11)
 			_add_log_line(ev)
 			await _sleep(TALLY_SYN_CADENCE)
 			if _skip: break
@@ -712,6 +740,7 @@ func _fill_log(score: Dictionary) -> void:
 
 # Transient "+this spin" counter, floating just below the Light chip, green to read
 # as distinct from the gold persistent total.
+
 func _show_spin_total() -> void:
 	if not is_instance_valid(_spin_total_label):
 		_spin_total_label = Label.new()
@@ -909,16 +938,20 @@ func _resolve_tithe() -> void:
 		_win()
 		return
 	_update_hud()
-	# Quick tithe line (1-11), then the next season beat if this tithe closed a season.
+	# Quick tithe line (1-11) with the bell, then the next season beat if this tithe
+	# closed a season.
 	if Story.TITHE.has(paid):
+		Sfx.play("tithe_bell")
 		await _play_story_screen(String(Story.TITHE[paid]["line"]), String(Story.TITHE[paid].get("note", "")))
 	var season := Story.season_after(paid)
 	if season != "":
+		Sfx.play("season_complete")
 		await _play_story_screen(String(Story.SEASONS[season]))
 
 func _win() -> void:
 	running = false
 	Settings.vibrate(120)                            # longer pulse on a win
+	Sfx.play("win_fanfare")
 	spin_button.disabled = true
 	bag_button.disabled = true
 	draft_layer.hide()
@@ -929,6 +962,7 @@ func _win() -> void:
 
 func _lose(_cost: int) -> void:
 	running = false
+	Sfx.play("lose")
 	spin_button.disabled = true
 	bag_button.disabled = true
 	draft_layer.hide()
@@ -938,16 +972,23 @@ func _lose(_cost: int) -> void:
 
 # New Run: fully reset to initial conditions and start fresh.
 func _on_new_run() -> void:
+	Sfx.play("ui_click")
 	_start_run()
 	await _begin_narrative()
 
 # --- narrative -----------------------------------------------------------
 
 # Run-start narrative: opening intro (if enabled), then the First Light season beat.
+# Skipping the intro cuts the rest of the opening AND the First Light beat — straight
+# to play. (A normally-finished or disabled intro still shows First Light.)
 func _begin_narrative() -> void:
+	_intro_skip = false
 	if Settings.intro_enabled:
 		Settings.set_intro_seen(true)
 		await _play_intro()
+		if _intro_skip:
+			return
+	Sfx.play("season_complete")                      # entering First Light
 	await _play_story_screen(Story.SEASONS["first_light"])
 
 # Paced opening backstory: one beat per screen, with Skip (skips the rest this run).
@@ -979,10 +1020,11 @@ func _play_story_screen(text: String, note: String = "") -> void:
 	story_layer.hide()
 
 func _on_story_advance() -> void:
+	Sfx.play("ui_click")
 	_story_advance.emit()
 
-# Skip: end the opening intro now (skip all remaining opening beats). The First Light
-# beat and the per-tithe / per-season popups still play.
+# Skip: end the opening now — cuts the remaining intro beats AND the First Light beat,
+# going straight to play. Per-tithe / per-season popups still appear later.
 func _on_story_skip() -> void:
 	_intro_skip = true
 	_story_advance.emit()                            # unblock the current beat's await
@@ -1201,15 +1243,18 @@ func _title_case(s: String) -> String:
 	return " ".join(out)
 
 func _on_pick(id: String) -> void:
+	Sfx.play("ui_click")
 	pool.append(MidsummerEngine.make_tile(id))
 	_close_draft()
 
 func _on_skip() -> void:
+	Sfx.play("ui_click")
 	_close_draft()
 
 func _on_reroll() -> void:
 	if reroll_orbs <= 0:
 		return
+	Sfx.play("ui_click")
 	reroll_orbs -= 1
 	_update_hud()
 	_open_draft()                                    # re-picks 3 fresh cards, refreshes button
@@ -1226,12 +1271,14 @@ func _close_draft() -> void:
 func _on_bag_open() -> void:
 	if not running:
 		return
+	Sfx.play("ui_click")
 	_build_bag()
 	bag_layer.show()
 	spin_button.disabled = true
 	bag_button.disabled = true
 
 func _on_bag_close() -> void:
+	Sfx.play("ui_click")
 	bag_layer.hide()
 	if running:
 		spin_button.disabled = false
@@ -1339,6 +1386,7 @@ func _open_symbol_popup(id: String, uid: String) -> void:
 	symbol_popup_layer.show()
 
 func _close_symbol_popup() -> void:
+	Sfx.play("ui_click")
 	symbol_popup_layer.hide()
 
 func _on_popup_discard() -> void:

@@ -11,7 +11,8 @@ const SEC := "settings"
 var animation_mode := "normal"   # "off" | "slow" | "normal" | "fast"
 var music_enabled := true
 var music_volume := 0.7          # 0.0 - 1.0
-var sfx_enabled := true          # stub for future SFX
+var sfx_enabled := true
+var sfx_volume := 0.8            # 0.0 - 1.0
 var vibration_enabled := true
 var intro_enabled := true        # show the opening backstory at run start
 var intro_seen := false          # set true once the intro has played (informational)
@@ -53,6 +54,11 @@ func set_sfx_enabled(on: bool) -> void:
 	sfx_enabled = on
 	_changed()
 
+func set_sfx_volume(v: float) -> void:
+	sfx_volume = clampf(v, 0.0, 1.0)
+	apply_audio()
+	_changed()
+
 func set_vibration_enabled(on: bool) -> void:
 	vibration_enabled = on
 	_changed()
@@ -77,6 +83,10 @@ func apply_audio() -> void:
 	AudioServer.set_bus_mute(bus, not music_enabled)
 	# Map 0-1 linear to dB; floor avoids -inf at 0.
 	AudioServer.set_bus_volume_db(bus, linear_to_db(clampf(music_volume, 0.0001, 1.0)))
+	# SFX bus (created by the Sfx autoload; may not exist yet on first call).
+	var sbus := AudioServer.get_bus_index("SFX")
+	if sbus >= 0:
+		AudioServer.set_bus_volume_db(sbus, linear_to_db(clampf(sfx_volume, 0.0001, 1.0)))
 
 # --- haptics ---
 # No-op unless enabled and on a handheld OS, so the toggle is safe on desktop.
@@ -97,6 +107,7 @@ func load_settings() -> void:
 	music_enabled = bool(cfg.get_value(SEC, "music_enabled", music_enabled))
 	music_volume = clampf(float(cfg.get_value(SEC, "music_volume", music_volume)), 0.0, 1.0)
 	sfx_enabled = bool(cfg.get_value(SEC, "sfx_enabled", sfx_enabled))
+	sfx_volume = clampf(float(cfg.get_value(SEC, "sfx_volume", sfx_volume)), 0.0, 1.0)
 	vibration_enabled = bool(cfg.get_value(SEC, "vibration_enabled", vibration_enabled))
 	intro_enabled = bool(cfg.get_value(SEC, "intro_enabled", intro_enabled))
 	intro_seen = bool(cfg.get_value(SEC, "intro_seen", intro_seen))
@@ -107,6 +118,7 @@ func save_settings() -> void:
 	cfg.set_value(SEC, "music_enabled", music_enabled)
 	cfg.set_value(SEC, "music_volume", music_volume)
 	cfg.set_value(SEC, "sfx_enabled", sfx_enabled)
+	cfg.set_value(SEC, "sfx_volume", sfx_volume)
 	cfg.set_value(SEC, "vibration_enabled", vibration_enabled)
 	cfg.set_value(SEC, "intro_enabled", intro_enabled)
 	cfg.set_value(SEC, "intro_seen", intro_seen)

@@ -494,10 +494,24 @@ max_value = 1.0
 step = 0.01
 value = 0.7
 
-[node name="SfxToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
+[node name="SfxRow" type="HBoxContainer" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SfxToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox/SfxRow"]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 toggle_mode = true
 text = "Sound: On"
+
+[node name="SfxSlider" type="HSlider" parent="SettingsLayer/Panel/SettingsBox/SfxRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.8
 
 [node name="VibrationToggle" type="Button" parent="SettingsLayer/Panel/SettingsBox"]
 layout_mode = 2
