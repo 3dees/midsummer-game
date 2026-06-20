@@ -16,8 +16,8 @@
 #       every, chance, round_type, tracks, cap, present_target, absent_target.
 class_name MidsummerEngine
 
-const GRID_COLS := 5
-const GRID_ROWS := 4
+const GRID_COLS := 4
+const GRID_ROWS := 5
 const GRID_SIZE := 20
 
 const BASE_TITHE_COSTS := [25, 50, 100, 150, 225, 300, 375, 450, 575, 650, 700, 777]

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scenes/game.gd" id="1_game"]
 [ext_resource type="Texture2D" path="res://assets/sprites/background.png" id="2_bg"]
 [ext_resource type="Theme" path="res://ui/theme.tres" id="3_theme"]
-[ext_resource type="Texture2D" path="res://assets/sprites/cabinet_clean.png" id="4_cabinet"]
+[ext_resource type="Texture2D" path="res://assets/purple_frame.png" id="4_cabinet"]
 [ext_resource type="Texture2D" path="res://assets/sprites/orb.png" id="5_orb"]
 [ext_resource type="Texture2D" path="res://assets/sprites/bell.png" id="6_bell"]
 [ext_resource type="AudioStream" path="res://assets/audio/open_theme.mp3" id="7_music"]
@@ -134,13 +134,13 @@ horizontal_alignment = 1
 [node name="CabinetAspect" type="AspectRatioContainer" parent="Layout"]
 layout_mode = 2
 size_flags_vertical = 3
-ratio = 0.6666667
+ratio = 0.7466667
 stretch_mode = 2
 
 [node name="Cabinet" type="Control" parent="Layout/CabinetAspect"]
 layout_mode = 2
 
-[node name="CabinetImg" type="TextureRect" parent="Layout/CabinetAspect/Cabinet"]
+[node name="FrameBase" type="TextureRect" parent="Layout/CabinetAspect/Cabinet"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -152,53 +152,64 @@ texture = ExtResource("4_cabinet")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="FrameOverlay" type="TextureRect" parent="Layout/CabinetAspect/Cabinet"]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Grid" type="GridContainer" parent="Layout/CabinetAspect/Cabinet"]
 layout_mode = 1
-anchor_left = 0.2324219
-anchor_top = 0.2838542
-anchor_right = 0.7607422
-anchor_bottom = 0.565625
+anchor_left = 0.115
+anchor_top = 0.1
+anchor_right = 0.89
+anchor_bottom = 0.825
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/h_separation = 0
 theme_override_constants/v_separation = 0
-columns = 5
+columns = 4
 
-[node name="StatusBox" type="VBoxContainer" parent="Layout/CabinetAspect/Cabinet"]
-layout_mode = 1
-anchor_left = 0.2324219
-anchor_top = 0.5657552
-anchor_right = 0.7607422
-anchor_bottom = 0.6673177
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
+[node name="StatusArea" type="MarginContainer" parent="Layout"]
+layout_mode = 2
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="StatusBox" type="VBoxContainer" parent="Layout/StatusArea"]
+layout_mode = 2
+alignment = 1
 theme_override_constants/separation = 2
 
-[node name="SeasonRound" type="Label" parent="Layout/CabinetAspect/Cabinet/StatusBox"]
+[node name="SeasonRound" type="Label" parent="Layout/StatusArea/StatusBox"]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
 text = "FIRST LIGHT · ROUND 1"
 horizontal_alignment = 1
 
-[node name="SpinsToBell" type="Label" parent="Layout/CabinetAspect/Cabinet/StatusBox"]
+[node name="SpinsToBell" type="Label" parent="Layout/StatusArea/StatusBox"]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
 text = "0 spins to the bell"
 horizontal_alignment = 1
 
-[node name="ProgressRow" type="HBoxContainer" parent="Layout/CabinetAspect/Cabinet/StatusBox"]
+[node name="ProgressRow" type="HBoxContainer" parent="Layout/StatusArea/StatusBox"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="TitheBar" type="ProgressBar" parent="Layout/CabinetAspect/Cabinet/StatusBox/ProgressRow"]
+[node name="TitheBar" type="ProgressBar" parent="Layout/StatusArea/StatusBox/ProgressRow"]
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
 show_percentage = false
 
-[node name="BellIcon" type="TextureRect" parent="Layout/CabinetAspect/Cabinet/StatusBox/ProgressRow"]
+[node name="BellIcon" type="TextureRect" parent="Layout/StatusArea/StatusBox/ProgressRow"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4

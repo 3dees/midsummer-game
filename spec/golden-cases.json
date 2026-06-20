@@ -1,22 +1,22 @@
 {
-  "_comment": "Language-neutral scoring spec for Midsummer Slots. Each case fixes a grid and context, then asserts the exact ScoreResult. These are the regression baseline for v1 and the port spec for the Godot/GDScript rewrite: a faithful port must reproduce every expected value. Grid keys are cell indices (0-19, index = row*5 + col). Values are symbol ids. Context defaults: totalSpins 0, roundNumber 0, appearanceCounts {}, destroyedThisRun 0, alternatingTick false. Cases avoid Clover (random) and Othala (known bug); those live in the statistical and known-gaps suites. UPDATED June 2026 to the live build (adjacency bonuses doubled in the synergy pass).",
+  "_comment": "Language-neutral scoring spec for Midsummer Slots. Each case fixes a grid and context, then asserts the exact ScoreResult. These are the regression baseline for v1 and the port spec for the Godot/GDScript rewrite: a faithful port must reproduce every expected value. Grid keys are cell indices (0-19, index = row*4 + col (4 cols x 5 rows)). Values are symbol ids. Context defaults: totalSpins 0, roundNumber 0, appearanceCounts {}, destroyedThisRun 0, alternatingTick false. Cases avoid Clover (random) and Othala (known bug); those live in the statistical and known-gaps suites. UPDATED June 2026 to the live build (adjacency bonuses doubled in the synergy pass).",
   "cases": [
     {
       "name": "fox_plus_two_rabbits",
       "explain": "Fox +1 per Rabbit on grid (3+2=5). Each Rabbit: Fox present so the absent-fox +2 does not apply, present-fox +1 does (2+1=3).",
       "grid": {
-        "1": "rabbit",
-        "6": "fox",
-        "11": "rabbit"
+        "4": "rabbit",
+        "5": "fox",
+        "6": "rabbit"
       },
       "expect": {
         "orbs": 11,
         "reroll": 0,
         "removal": 0,
         "perCell": {
-          "1": 3,
-          "6": 5,
-          "11": 3
+          "4": 3,
+          "5": 5,
+          "6": 3
         }
       }
     },
@@ -25,8 +25,8 @@
       "explain": "Lantern +1 to orthogonal neighbours; Firefly base1 +lantern1 +own-adjacency-to-lantern1 = 3, then Lantern doubles all Fireflies = 6. Moth base2 +lantern1 = 3 (not adjacent to the firefly).",
       "grid": {
         "0": "lantern",
-        "1": "firefly",
-        "5": "moth"
+        "1": "moth",
+        "4": "firefly"
       },
       "expect": {
         "orbs": 14,
@@ -34,8 +34,8 @@
         "removal": 0,
         "perCell": {
           "0": 3,
-          "1": 8,
-          "5": 3
+          "1": 3,
+          "4": 8
         }
       }
     },
@@ -44,7 +44,7 @@
       "explain": "globalMultiplier is grid-wide: a Firefly two cells away (not adjacent) is still doubled (1->2). Confirms adjacency (+1) and global-multiplier (x2) are independent scopes.",
       "grid": {
         "0": "lantern",
-        "2": "firefly"
+        "8": "firefly"
       },
       "expect": {
         "orbs": 5,
@@ -52,7 +52,7 @@
         "removal": 0,
         "perCell": {
           "0": 3,
-          "2": 2
+          "8": 2
         }
       }
     },
@@ -60,20 +60,20 @@
       "name": "fairy_ring_doubles_forest_floor",
       "explain": "4 Forest Floor symbols present (>=3), so Fairy Ring doubles every Forest Floor value including itself. Fern 2->4, Mushroom 1->2, Ring 5->10, Acorn 1->2.",
       "grid": {
-        "1": "fern",
-        "5": "mushroom",
-        "6": "fairy_ring",
-        "7": "acorn"
+        "1": "mushroom",
+        "4": "fern",
+        "5": "fairy_ring",
+        "9": "acorn"
       },
       "expect": {
         "orbs": 20,
         "reroll": 0,
         "removal": 0,
         "perCell": {
-          "1": 6,
-          "5": 2,
-          "6": 10,
-          "7": 2
+          "1": 2,
+          "4": 6,
+          "5": 10,
+          "9": 2
         }
       }
     },
@@ -82,8 +82,8 @@
       "explain": "3 Mushrooms on grid trips the threshold reward: +1 Reroll Orb (fired once). Base value 1 each.",
       "grid": {
         "0": "mushroom",
-        "1": "mushroom",
-        "2": "mushroom"
+        "4": "mushroom",
+        "8": "mushroom"
       },
       "expect": {
         "orbs": 3,
@@ -96,8 +96,8 @@
       "explain": "Sparrow +1 per other Creature on grid (Fox, Rabbit = 2) -> 3. Fox +1 per Rabbit -> 4. Rabbit present-fox +1 -> 3. Non-adjacent placement isolates the global effect.",
       "grid": {
         "0": "sparrow",
-        "2": "fox",
-        "4": "rabbit"
+        "8": "fox",
+        "16": "rabbit"
       },
       "expect": {
         "orbs": 10,
@@ -105,8 +105,8 @@
         "removal": 0,
         "perCell": {
           "0": 3,
-          "2": 4,
-          "4": 3
+          "8": 4,
+          "16": 3
         }
       }
     },
@@ -174,16 +174,16 @@
       "name": "dewdrop_adjacent_flower",
       "explain": "Dewdrop +2 when orthogonally adjacent to any Flower (Foxglove). Dewdrop 1->3. Foxglove base 2, no Honeybee/Beehive present.",
       "grid": {
-        "1": "foxglove",
-        "6": "dewdrop"
+        "4": "foxglove",
+        "5": "dewdrop"
       },
       "expect": {
         "orbs": 7,
         "reroll": 0,
         "removal": 0,
         "perCell": {
-          "1": 2,
-          "6": 5
+          "4": 2,
+          "5": 5
         }
       }
     },
@@ -237,18 +237,18 @@
       "name": "solstice_flame_buffs_all_others",
       "explain": "Solstice Flame targets 'all', the only globalBonus path that buffs OTHER cells: Fern 1->2, Fox 3->4. Flame itself is not self-buffed (10). Total 16.",
       "grid": {
-        "1": "fern",
-        "6": "solstice_flame",
-        "11": "fox"
+        "4": "fern",
+        "5": "solstice_flame",
+        "6": "fox"
       },
       "expect": {
         "orbs": 16,
         "reroll": 0,
         "removal": 0,
         "perCell": {
-          "1": 2,
-          "6": 10,
-          "11": 4
+          "4": 2,
+          "5": 10,
+          "6": 4
         }
       }
     },
@@ -256,18 +256,18 @@
       "name": "antler_crown_self_buffs_per_creature",
       "explain": "CHARACTERIZATION OF CURRENT BEHAVIOUR. Description reads 'All Creatures +2', but globalBonus with a tag target buffs only the SOURCE: Antler Crown +2 per creature (Fox, Rabbit = 2) -> 10. Fox 4, Rabbit 3 are unbuffed. See known-gaps: confirm whether this should buff the creatures instead.",
       "grid": {
-        "1": "fox",
-        "6": "antler_crown",
-        "11": "rabbit"
+        "4": "fox",
+        "5": "antler_crown",
+        "6": "rabbit"
       },
       "expect": {
         "orbs": 17,
         "reroll": 0,
         "removal": 0,
         "perCell": {
-          "1": 4,
-          "6": 10,
-          "11": 3
+          "4": 4,
+          "5": 10,
+          "6": 3
         }
       }
     },
@@ -275,9 +275,9 @@
       "name": "golden_stag_solar_and_creature_self_buff",
       "explain": "CHARACTERIZATION. Stag +2 per other Solar (Sunbeam) and +1 per other Creature (Fox) -> 9. Sunbeam +1 per other Solar (Stag) -> 3 (even round). Fox 3. The 'all Creatures +1' reads as a team buff but is self-directed.",
       "grid": {
-        "1": "sunbeam",
-        "6": "golden_stag",
-        "11": "fox"
+        "4": "sunbeam",
+        "5": "golden_stag",
+        "6": "fox"
       },
       "ctx": {
         "roundNumber": 0
@@ -287,9 +287,9 @@
         "reroll": 0,
         "removal": 0,
         "perCell": {
-          "1": 3,
-          "6": 9,
-          "11": 3
+          "4": 3,
+          "5": 9,
+          "6": 3
         }
       }
     },
@@ -310,7 +310,7 @@
       "explain": "Two Standing Stones: multipleBonus (requires 2) doubles each, 5->10. Total 20.",
       "grid": {
         "0": "standing_stone",
-        "2": "standing_stone"
+        "8": "standing_stone"
       },
       "expect": {
         "orbs": 20,
@@ -318,7 +318,7 @@
         "removal": 0,
         "perCell": {
           "0": 10,
-          "2": 10
+          "8": 10
         }
       }
     },

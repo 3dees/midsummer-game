@@ -5,10 +5,24 @@
 # MidsummerEngine (scoring) + Symbols (registry).
 extends Control
 
-const COLS := 5
-const ROWS := 4
+const COLS := 4
+const ROWS := 5
 const SPRITE_DIR := "res://assets/sprites/"
 const Story = preload("res://story.gd")   # narrative text holder
+
+# Season -> cabinet frame art (index 0..3 = First Light / Sun's Climb / Golden Sun /
+# Midnight Sun). Loaded defensively at _ready so a missing frame is a broken texture,
+# not a dead script.
+const SEASON_FRAME_PATHS := [
+	"res://assets/purple_frame.png",   # First Light
+	"res://assets/teal_frame.png",     # Sun's Climb
+	"res://assets/green_frame.png",    # Golden Sun
+	"res://assets/orange_frame.png",   # Midnight Sun
+]
+const SEASON_FADE := 0.7              # frame cross-fade duration (s)
+var _season_frames: Array = []        # loaded textures, parallel to SEASON_FRAME_PATHS
+var _cur_season_idx := -1             # current frame index, to detect season changes
+var _frame_tween: Tween = null
 
 # --- run state (mirrors the play.tsx GameState) ---
 var pool: Array = []                 # Array of tiles (MidsummerEngine.make_tile)
@@ -26,15 +40,17 @@ var running := true
 
 var schedule: Array = MidsummerEngine.tithe_schedule()
 
-# Grid window placement over the cabinet frame, as fractions of the frame image.
-# Calibrated from the web SlotFrame (cabinet_clean.png, 1024x1536): grid origin
-# (238, 436), 5x4 cells of 108.2px. Tweak in the Inspector then F6 to eyeball.
-@export var grid_left_frac: float = 0.2324219    # 238 / 1024
-@export var grid_top_frac: float = 0.2838542     # 436 / 1536
-@export var grid_right_frac: float = 0.7607422   # (238 + 5*108.2) / 1024
-@export var grid_bottom_frac: float = 0.5656250  # (436 + 4*108.2) / 1536
+# Grid window placement over the cabinet frame, as fractions of the (portrait, 1792x2400,
+# ratio 0.7467) frame's opening. These @export defaults override the .tscn anchors at
+# _ready, so they are what renders — tune in the Inspector then F6 to eyeball.
+@export var grid_left_frac: float = 0.115
+@export var grid_top_frac: float = 0.10
+@export var grid_right_frac: float = 0.89
+@export var grid_bottom_frac: float = 0.825
 
 @onready var grid_box: GridContainer = $Layout/CabinetAspect/Cabinet/Grid
+@onready var frame_base: TextureRect = $Layout/CabinetAspect/Cabinet/FrameBase
+@onready var frame_overlay: TextureRect = $Layout/CabinetAspect/Cabinet/FrameOverlay
 @onready var orb_chip: Label = $Layout/HudPanel/HudBox/HudTop/ChipsRow/OrbChipBox/OrbChip
 @onready var reroll_chip: Label = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RerollChipBox/RerollChip
 @onready var removal_chip: Label = $Layout/HudPanel/HudBox/HudTop/ChipsRow/RemovalChipBox/RemovalChip
@@ -57,9 +73,9 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 }
 @onready var music: AudioStreamPlayer = $Music
 @onready var sub_line: Label = $Layout/HudPanel/HudBox/SubLine
-@onready var season_round: Label = $Layout/CabinetAspect/Cabinet/StatusBox/SeasonRound
-@onready var spins_to_bell: Label = $Layout/CabinetAspect/Cabinet/StatusBox/SpinsToBell
-@onready var tithe_bar: ProgressBar = $Layout/CabinetAspect/Cabinet/StatusBox/ProgressRow/TitheBar
+@onready var season_round: Label = $Layout/StatusArea/StatusBox/SeasonRound
+@onready var spins_to_bell: Label = $Layout/StatusArea/StatusBox/SpinsToBell
+@onready var tithe_bar: ProgressBar = $Layout/StatusArea/StatusBox/ProgressRow/TitheBar
 @onready var spin_button: Button = $Layout/SpinButton
 @onready var bag_button: Button = $Layout/BagButton
 @onready var background: TextureRect = $Background
@@ -100,6 +116,7 @@ const CHOREO_GAP := 0.05            # Phase 1: gap between adjacency pair beats 
 const PHASE_BEAT := 0.15            # beat between Phase 1 (choreo) and Phase 2 (tally)
 const TALLY_BASE_CADENCE := 0.04    # Phase 2: base-value sweep cadence (40ms)
 const TALLY_SYN_CADENCE := 0.06     # Phase 2: synergy float cadence (60ms)
+const TALLY_TICK_LIMIT := 10        # score_tick stops after this many ticks (long tallies sound odd)
 const TALLY_GLOBAL_PAUSE := 0.10    # Phase 2: pause before the global apply
 const BANK_PAUSE := 0.18            # pause once the tally reaches the spin total
 const BANK_DUR := 0.30              # count-up / fly-into-Light bank animation
@@ -179,6 +196,7 @@ func _ready() -> void:
 	sfx_slider.value_changed.connect(_on_sfx_volume)
 	vibration_toggle.pressed.connect(_on_toggle_vibration)
 	_refresh_settings_ui()
+	_load_season_frames()
 	# mp3 streams don't carry a loop flag from import; set it so the theme loops.
 	if music.stream is AudioStreamMP3:
 		music.stream.loop = true
@@ -346,6 +364,8 @@ func _start_run() -> void:
 	win_layer.hide()
 	loss_layer.hide()
 	story_layer.hide()
+	_cur_season_idx = -1                              # force a fresh frame apply
+	_set_season_frame(_season_index(tithe_round), false)
 	spin_button.disabled = false
 	bag_button.disabled = false
 	for line in log_lines.get_children():
@@ -632,6 +652,7 @@ func _play_reveal(score: Dictionary) -> void:
 	# ---------- PHASE 2 — Tally (numbers count up, no bounces) ----------
 	_show_spin_total()
 	var run := 0
+	var ticks := 0                               # score_tick plays only for the first TALLY_TICK_LIMIT
 	# Base sweep, reading order.
 	for i in _cells.size():
 		var tile = grid[i] if i < grid.size() else null
@@ -643,7 +664,9 @@ func _play_reveal(score: Dictionary) -> void:
 		run += base
 		_set_spin_total(run)
 		_spawn_float(i, base)
-		Sfx.play("score_tick", randf_range(0.97, 1.03))  # one tick per cell-float; subtle rattle
+		if ticks < TALLY_TICK_LIMIT:                  # cut the tick after a short run
+			Sfx.play("score_tick", randf_range(0.97, 1.03))
+		ticks += 1
 		await _sleep(TALLY_BASE_CADENCE)
 		if _skip: break
 	# Synergy bonuses (pairs + locals), reading order; multipliers float but don't add.
@@ -658,7 +681,9 @@ func _play_reveal(score: Dictionary) -> void:
 				_spawn_float(anchor, int(ev["orbs_delta"]))
 			elif ev.has("multiplier"):
 				_spawn_text(anchor, "×%s" % _fmt_num(float(ev["multiplier"])))
-			Sfx.play("score_tick", randf_range(0.97, 1.03))
+			if ticks < TALLY_TICK_LIMIT:
+				Sfx.play("score_tick", randf_range(0.97, 1.03))
+			ticks += 1
 			_add_log_line(ev)
 			await _sleep(TALLY_SYN_CADENCE)
 			if _skip: break
@@ -946,6 +971,9 @@ func _resolve_tithe() -> void:
 	if season != "":
 		Sfx.play("season_complete")
 		await _play_story_screen(String(Story.SEASONS[season]))
+		# Cross-fade the cabinet frame AFTER the modal closes, so the dissolve is visible
+		# (the season-beat backdrop would otherwise hide it).
+		_set_season_frame(_season_index(tithe_round), true)
 
 func _win() -> void:
 	running = false
@@ -1457,3 +1485,35 @@ func _season(round_idx: int) -> String:
 		return "Golden Sun"
 	else:
 		return "Midnight Sun"
+
+# --- season cabinet frame ------------------------------------------------
+
+func _load_season_frames() -> void:
+	_season_frames.clear()
+	for p in SEASON_FRAME_PATHS:
+		_season_frames.append(load(p) if ResourceLoader.exists(p) else null)
+
+# Season index 0..3 for a 0-based tithe_round (3 tithes per season).
+func _season_index(round_idx: int) -> int:
+	@warning_ignore("integer_division")
+	return clampi(round_idx / 3, 0, 3)
+
+# Set the cabinet frame for a season. animate cross-fades the old frame out over the new.
+func _set_season_frame(idx: int, animate: bool) -> void:
+	if _season_frames.is_empty():
+		return
+	idx = clampi(idx, 0, _season_frames.size() - 1)
+	if idx == _cur_season_idx:
+		return
+	var old_tex: Texture2D = frame_base.texture
+	frame_base.texture = _season_frames[idx]
+	if _frame_tween and _frame_tween.is_valid():
+		_frame_tween.kill()
+	if animate and old_tex != null:
+		frame_overlay.texture = old_tex              # old frame on top, dissolve it out
+		frame_overlay.modulate.a = 1.0
+		_frame_tween = create_tween()
+		_frame_tween.tween_property(frame_overlay, "modulate:a", 0.0, SEASON_FADE)
+	else:
+		frame_overlay.modulate.a = 0.0
+	_cur_season_idx = idx
