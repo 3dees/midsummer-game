@@ -632,7 +632,6 @@ func _play_reveal(score: Dictionary) -> void:
 	# ---------- PHASE 2 — Tally (numbers count up, no bounces) ----------
 	_show_spin_total()
 	var run := 0
-	var step := 1                                # ascending score_tick index (1..11), reset each tally
 	# Base sweep, reading order.
 	for i in _cells.size():
 		var tile = grid[i] if i < grid.size() else null
@@ -644,8 +643,7 @@ func _play_reveal(score: Dictionary) -> void:
 		run += base
 		_set_spin_total(run)
 		_spawn_float(i, base)
-		Sfx.play("score_tick_%02d" % step)           # one tick per cell-float; pitch baked in
-		step = mini(step + 1, 11)                    # advance, hold the top note on busy boards
+		Sfx.play("score_tick", randf_range(0.97, 1.03))  # one tick per cell-float; subtle rattle
 		await _sleep(TALLY_BASE_CADENCE)
 		if _skip: break
 	# Synergy bonuses (pairs + locals), reading order; multipliers float but don't add.
@@ -660,8 +658,7 @@ func _play_reveal(score: Dictionary) -> void:
 				_spawn_float(anchor, int(ev["orbs_delta"]))
 			elif ev.has("multiplier"):
 				_spawn_text(anchor, "×%s" % _fmt_num(float(ev["multiplier"])))
-			Sfx.play("score_tick_%02d" % step)
-			step = mini(step + 1, 11)
+			Sfx.play("score_tick", randf_range(0.97, 1.03))
 			_add_log_line(ev)
 			await _sleep(TALLY_SYN_CADENCE)
 			if _skip: break
