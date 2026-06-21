@@ -204,8 +204,8 @@ func _ready() -> void:
 	vibration_toggle.pressed.connect(_on_toggle_vibration)
 	_refresh_settings_ui()
 	_load_season_frames()
-	# mp3 streams don't carry a loop flag from import; set it so the theme loops.
-	if music.stream is AudioStreamMP3:
+	# mp3/ogg streams don't carry a loop flag from import; set it so the theme loops.
+	if music.stream is AudioStreamMP3 or music.stream is AudioStreamOggVorbis:
 		music.stream.loop = true
 	_start_run()
 	await _begin_narrative()
@@ -1300,6 +1300,8 @@ func _title_case(s: String) -> String:
 func _on_pick(id: String) -> void:
 	Sfx.play("ui_click")
 	pool.append(MidsummerEngine.make_tile(id))
+	grid = MidsummerEngine.roll_grid(pool)           # show the updated pool on the board now
+	_render_grid()
 	_close_draft()
 
 func _on_skip() -> void:
