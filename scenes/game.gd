@@ -214,6 +214,25 @@ func _ready() -> void:
 # spin/reveal skips straight to the final committed state. The event is consumed so it
 # can't also land as a draft pick or trigger another spin.
 func _input(event: InputEvent) -> void:
+	# DEBUG SHORTCUT (remove before release): F9 jumps to the final tithe, one spin from
+	# the bell with Light banked to the cost, so a single SPIN clears the 12th tithe and
+	# fires the win screen — for recording the ending.
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F9:
+		tithe_round = 11
+		spin_in_cycle = int(schedule[11]["spins"]) - 1
+		orbs = int(schedule[11]["orbs"])
+		# Stack a strong synergy combo so the finale spin packs the grid and pops a lot.
+		var combo := ["fern", "oak_leaf", "fern", "oak_leaf", "mushroom", "snail", "mushroom",
+			"acorn", "fern", "oak_leaf", "lantern", "firefly", "firefly", "sparrow", "fox",
+			"rabbit", "mushroom", "snail", "fern", "oak_leaf", "lantern", "firefly"]
+		pool.clear()
+		for id in combo:
+			pool.append(MidsummerEngine.make_tile(id))
+		_set_season_frame(_season_index(tithe_round), true)   # cross-fade to Midnight Sun (orange)
+		_render_grid()
+		_update_hud()
+		get_viewport().set_input_as_handled()
+		return
 	# Story screens own input while up. Handle Enter/Space here (keyboard only) and let
 	# mouse fall through to the GUI phase so Continue/Skip/Don't-show buttons still click;
 	# the backdrop's gui_input handles a tap anywhere else.
