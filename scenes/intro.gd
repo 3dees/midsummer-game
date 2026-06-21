@@ -12,8 +12,9 @@ const MAIN := "res://scenes/main.tscn"
 var _done := false
 
 func _ready() -> void:
-	# Gate: disabled, or no usable stream -> straight to the game (no video, no hang).
-	if not Settings.intro_enabled or video.stream == null:
+	# Gate: web has no Theora playback, intro disabled, or no usable stream -> straight
+	# to the game (no video, no black-screen wait).
+	if OS.has_feature("web") or not Settings.intro_enabled or video.stream == null:
 		_go_main()
 		return
 	video.finished.connect(_go_main)

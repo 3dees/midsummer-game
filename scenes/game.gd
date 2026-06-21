@@ -216,8 +216,9 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	# DEBUG SHORTCUT (remove before release): F9 jumps to the final tithe, one spin from
 	# the bell with Light banked to the cost, so a single SPIN clears the 12th tithe and
-	# fires the win screen — for recording the ending.
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F9:
+	# fires the win screen — for recording the ending. Debug builds only (editor / debug
+	# export), so it's off in the released build and players can't stumble on it.
+	if OS.is_debug_build() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F9:
 		tithe_round = 11
 		spin_in_cycle = int(schedule[11]["spins"]) - 1
 		orbs = int(schedule[11]["orbs"])
