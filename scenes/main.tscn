@@ -449,6 +449,38 @@ theme_type_variation = &"TitleLabel"
 text = "Settings"
 horizontal_alignment = 1
 
+[node name="DifficultyLabel" type="Label" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Difficulty"
+
+[node name="DifficultyRow" type="HBoxContainer" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DiffEasy" type="Button" parent="SettingsLayer/Panel/SettingsBox/DifficultyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Easy"
+
+[node name="DiffNormal" type="Button" parent="SettingsLayer/Panel/SettingsBox/DifficultyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Normal"
+
+[node name="DiffHard" type="Button" parent="SettingsLayer/Panel/SettingsBox/DifficultyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Hard"
+
+[node name="DifficultyHint" type="Label" parent="SettingsLayer/Panel/SettingsBox"]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Applies on your next run."
+horizontal_alignment = 1
+
 [node name="AnimLabel" type="Label" parent="SettingsLayer/Panel/SettingsBox"]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"

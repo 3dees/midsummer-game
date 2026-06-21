@@ -38,7 +38,7 @@ var appearance_counts := {}
 var destroyed_this_run := 0
 var running := true
 
-var schedule: Array = MidsummerEngine.tithe_schedule()
+var schedule: Array = []             # built per run in _start_run from the difficulty setting
 
 # Grid window placement over the cabinet frame, as fractions of the (portrait, 1792x2400,
 # ratio 0.7467) frame's opening. These @export defaults override the .tscn anchors at
@@ -70,6 +70,11 @@ var schedule: Array = MidsummerEngine.tithe_schedule()
 	"slow": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimSlow,
 	"normal": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimNormal,
 	"fast": $SettingsLayer/Panel/SettingsBox/AnimRow/AnimFast,
+}
+@onready var diff_buttons := {
+	"easy": $SettingsLayer/Panel/SettingsBox/DifficultyRow/DiffEasy,
+	"normal": $SettingsLayer/Panel/SettingsBox/DifficultyRow/DiffNormal,
+	"hard": $SettingsLayer/Panel/SettingsBox/DifficultyRow/DiffHard,
 }
 @onready var music: AudioStreamPlayer = $Music
 @onready var sub_line: Label = $Layout/HudPanel/HudBox/SubLine
@@ -190,6 +195,8 @@ func _ready() -> void:
 			_on_settings_close())
 	for mode in anim_buttons:
 		(anim_buttons[mode] as Button).pressed.connect(_on_anim_mode.bind(mode))
+	for mode in diff_buttons:
+		(diff_buttons[mode] as Button).pressed.connect(_on_difficulty_mode.bind(mode))
 	music_toggle.pressed.connect(_on_toggle_music)
 	music_slider.value_changed.connect(_on_music_volume)
 	sfx_toggle.pressed.connect(_on_toggle_sfx)
@@ -247,6 +254,11 @@ func _on_anim_mode(mode: String) -> void:
 	Settings.set_animation_mode(mode)
 	_refresh_settings_ui()
 
+func _on_difficulty_mode(mode: String) -> void:
+	Settings.set_difficulty_mode(mode)             # applies on the next run
+	Sfx.play("ui_click")
+	_refresh_settings_ui()
+
 func _on_toggle_music() -> void:
 	Settings.set_music_enabled(not Settings.music_enabled)
 	_refresh_settings_ui()
@@ -275,6 +287,9 @@ func _refresh_settings_ui() -> void:
 		var btn: Button = anim_buttons[mode]
 		# Active mode = primary button; others = SecondaryButton variation.
 		btn.theme_type_variation = &"" if Settings.animation_mode == mode else &"SecondaryButton"
+	for mode in diff_buttons:
+		var dbtn: Button = diff_buttons[mode]
+		dbtn.theme_type_variation = &"" if Settings.difficulty_mode == mode else &"SecondaryButton"
 	music_toggle.text = "Music: %s" % ("On" if Settings.music_enabled else "Off")
 	music_toggle.button_pressed = Settings.music_enabled
 	if not music_slider.has_focus():
@@ -332,6 +347,8 @@ func _build_cells() -> void:
 # --- run lifecycle -------------------------------------------------------
 
 func _start_run() -> void:
+	# Fix the tithe schedule for this run from the chosen difficulty (changes apply next run).
+	schedule = MidsummerEngine.tithe_schedule(Settings.difficulty_multiplier())
 	pool.clear()
 	for id in Symbols.STARTING_POOL:
 		pool.append(MidsummerEngine.make_tile(id))
