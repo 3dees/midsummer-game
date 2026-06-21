@@ -16,6 +16,7 @@ var sfx_volume := 0.8            # 0.0 - 1.0
 var vibration_enabled := true
 var intro_enabled := true        # show the opening backstory at run start
 var intro_seen := false          # set true once the intro has played (informational)
+var difficulty_mode := "normal"  # "easy" | "normal" | "hard" (applies on next run)
 
 signal changed                   # emitted on any change so UI can refresh
 
@@ -71,6 +72,16 @@ func set_intro_seen(seen: bool) -> void:
 	intro_seen = seen
 	_changed()
 
+func set_difficulty_mode(mode: String) -> void:
+	if mode not in ["easy", "normal", "hard"]:
+		return
+	difficulty_mode = mode
+	_changed()
+
+# Tithe-cost multiplier for the current difficulty mode.
+func difficulty_multiplier() -> float:
+	return float(MidsummerEngine.DIFFICULTY_PRESETS.get(difficulty_mode, 3.2))
+
 func _changed() -> void:
 	save_settings()
 	changed.emit()
@@ -111,6 +122,9 @@ func load_settings() -> void:
 	vibration_enabled = bool(cfg.get_value(SEC, "vibration_enabled", vibration_enabled))
 	intro_enabled = bool(cfg.get_value(SEC, "intro_enabled", intro_enabled))
 	intro_seen = bool(cfg.get_value(SEC, "intro_seen", intro_seen))
+	difficulty_mode = String(cfg.get_value(SEC, "difficulty_mode", difficulty_mode))
+	if difficulty_mode not in ["easy", "normal", "hard"]:
+		difficulty_mode = "normal"
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
@@ -122,4 +136,5 @@ func save_settings() -> void:
 	cfg.set_value(SEC, "vibration_enabled", vibration_enabled)
 	cfg.set_value(SEC, "intro_enabled", intro_enabled)
 	cfg.set_value(SEC, "intro_seen", intro_seen)
+	cfg.set_value(SEC, "difficulty_mode", difficulty_mode)
 	cfg.save(PATH)

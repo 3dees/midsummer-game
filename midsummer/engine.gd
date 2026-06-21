@@ -22,16 +22,16 @@ const GRID_SIZE := 20
 
 const BASE_TITHE_COSTS := [22, 45, 100, 150, 225, 300, 375, 450, 575, 650, 700, 777]
 const TITHE_SPINS := [5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10]
-const DIFFICULTY := 3.2  # full difficulty now that reroll/removal spending are in (tithe cost = base * DIFFICULTY)
+const DIFFICULTY_PRESETS := { "easy": 2.2, "normal": 3.2, "hard": 3.8 }  # tithe-cost multiplier per mode
 const REMOVAL_ORB_CAP := 3
 
 static var _uid := 0
 
-# Per-tithe schedule: [{ "spins": int, "orbs": int }, ...]  (cost = base * DIFFICULTY)
-static func tithe_schedule() -> Array:
+# Per-tithe schedule: [{ "spins": int, "orbs": int }, ...]  (cost = base * difficulty)
+static func tithe_schedule(difficulty: float = 3.2) -> Array:
 	var out: Array = []
 	for i in BASE_TITHE_COSTS.size():
-		out.append({ "spins": TITHE_SPINS[i], "orbs": int(round(BASE_TITHE_COSTS[i] * DIFFICULTY)) })
+		out.append({ "spins": TITHE_SPINS[i], "orbs": int(round(BASE_TITHE_COSTS[i] * difficulty)) })
 	return out
 
 static func make_tile(id: String) -> Dictionary:
